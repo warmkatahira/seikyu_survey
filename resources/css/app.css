@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+@source '../views';
+@source '../js';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Hiragino Kaku Gothic ProN',
+        'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', Meiryo, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/*
+ * Show the I-beam only where something can actually be typed. Everything else gets the
+ * normal arrow, and anything clickable the hand, so staff can tell what reacts to a click.
+ * caret-color does the same for the blinking text caret a click would otherwise leave on
+ * a label or select. Text can still be selected and copied as before.
+ */
+@layer base {
+    body {
+        cursor: default;
+        caret-color: transparent;
+    }
+
+    input:not([type='checkbox'], [type='file']),
+    textarea {
+        cursor: text;
+        caret-color: auto;
+    }
+
+    a[href],
+    button,
+    select,
+    label[for],
+    label:has(input[type='checkbox']),
+    input[type='checkbox'],
+    input[type='file'] {
+        cursor: pointer;
+    }
+
+    /*
+     * The searchable selects are text inputs underneath, but read as dropdowns whenever their
+     * list is closed, including after a choice leaves the input focused.
+     */
+    input[role='combobox'][aria-expanded='false'] {
+        cursor: pointer;
+        caret-color: transparent;
+    }
+
+    :disabled {
+        cursor: not-allowed;
+    }
+}

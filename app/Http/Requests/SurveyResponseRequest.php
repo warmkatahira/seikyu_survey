@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Http\Requests;
+
+use App\Models\SurveyResponse;
+use App\Support\ChoiceCatalog;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class SurveyResponseRequest extends FormRequest
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function rules(ChoiceCatalog $catalog): array
+    {
+        $rules = [
+            'employee_id' => ['required', Rule::exists('employees', 'id')],
+            'customer_id' => ['required', Rule::exists('customers', 'id')],
+            'office_id' => ['required', Rule::exists('offices', 'id')],
+            'creation_minutes' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ];
+
+        foreach (SurveyResponse::choiceFields() as $field => $definition) {
+            $rules[$field] = ['nullable', Rule::in($catalog->optionIds($definition['category']))];
+        }
+
+        return $rules;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        $attributes = [
+            'employee_id' => '請求書の作成担当者',
+            'customer_id' => '顧客名',
+            'office_id' => '営業所・拠点',
+        ];
+
+        foreach (SurveyResponse::FIELDS as $field => $definition) {
+            $attributes[$field] = $definition['label'];
+        }
+
+        return $attributes;
+    }
+}
