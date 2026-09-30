@@ -29,7 +29,7 @@
             </x-field>
 
             <x-field name="customer_id" label="顧客名" required
-                hint="請求書を作成している顧客を選んでください。1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録してください。">
+                hint="請求書を作成している顧客を選んでください。1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録し、「作成区分」で区別してください。">
                 <x-select name="customer_id" :selected="$response->customer_id" placeholder="顧客名・顧客コードを入力して検索"
                     data-searchable>
                     @foreach ($customers as $customer)
@@ -39,6 +39,12 @@
                         </option>
                     @endforeach
                 </x-select>
+            </x-field>
+
+            <x-field name="billing_category" label="作成区分"
+                hint="1社で請求書を分けて作成している場合のみ、どの請求書かがわかる名前をご記入ください（例：卸、通販）。1社1枚の場合は空欄で構いません。">
+                <x-text-input name="billing_category" :value="$response->billing_category" maxlength="50"
+                    placeholder="例：通販" class="sm:max-w-60" />
             </x-field>
 
             <x-field name="office_id" label="営業所・拠点" required>
@@ -77,7 +83,7 @@
                             <x-text-input :name="$name" type="number" :value="$response->{$name}" min="0" max="9999"
                                 placeholder="例：45" class="sm:max-w-40" />
                         @else
-                            <textarea name="{{ $name }}" id="{{ $name }}" rows="4"
+                            <textarea name="{{ $name }}" id="{{ $name }}" rows="4" autocomplete="off"
                                 class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
                             >{{ old($name, $response->{$name}) }}</textarea>
                         @endif

@@ -42,14 +42,14 @@ class SurveyResponseExportTest extends TestCase
         $lines = explode("\n", trim($response->streamedContent()));
 
         $this->assertSame(
-            "\xEF\xBB\xBF".'No.,顧客コード,顧客名,営業所・拠点,請求書の作成担当者,保管料,荷役料,運賃,作業・その他,'
+            "\xEF\xBB\xBF".'No.,顧客コード,顧客名,作成区分,営業所・拠点,請求書の作成担当者,保管料,荷役料,運賃,作業・その他,'
                 .'保管料の課金方式,締め日,別紙明細の有無,別紙明細の形式,実績データの出どころ（主）,実績データの出どころ（副）,'
                 .'実績の記録タイミング,単価の根拠,前月ファイルのコピーで作成,1社あたりの作成時間（分）,'
                 .'イレギュラー作業の発生頻度,自分以外に作成できる人,困っていること・特記事項,登録日時,更新日時',
             trim($lines[0]),
         );
 
-        $this->assertStringContainsString('1,9999,株式会社ＤＤＤＤＤＤ,第1営業所,"山田 太郎",あり', $lines[1]);
+        $this->assertStringContainsString('1,9999,株式会社ＤＤＤＤＤＤ,,第1営業所,"山田 太郎",あり', $lines[1]);
         $this->assertStringContainsString('Excelの自作管理表', $lines[1]);
         $this->assertStringContainsString('いない（自分しか作れない）', $lines[1]);
     }

@@ -64,8 +64,14 @@
             @endif
         </form>
 
+        <a href="{{ route('responses.export', array_filter(['employee_id' => $employeeId, 'customer_id' => $customerId, 'office_id' => $officeId])) }}"
+            class="ms-auto rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+            title="いま表示している条件の回答を、全項目入りのExcelファイルで出力します">
+            {{ $employeeId || $customerId || $officeId ? '絞り込み結果をExcelで出力' : 'Excelで出力' }}
+        </a>
+
         <a href="{{ route('responses.create') }}"
-            class="ms-auto rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
             ＋ 新しい顧客の回答を追加
         </a>
     </div>
@@ -78,37 +84,34 @@
                     <th class="px-3 py-2 font-medium">顧客</th>
                     <th class="px-3 py-2 font-medium">営業所・拠点</th>
                     <th class="px-3 py-2 font-medium">作成担当者</th>
-                    <th class="px-3 py-2 font-medium">実績データの出どころ（主）</th>
                     <th class="px-3 py-2 font-medium whitespace-nowrap">作成時間</th>
-                    <th class="px-3 py-2 font-medium">自分以外に作成できる人</th>
+                    <th class="px-3 py-2 font-medium whitespace-nowrap">回答日時</th>
+                    <th class="px-3 py-2 font-medium whitespace-nowrap">更新日時</th>
                     <th class="px-3 py-2"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($responses as $response)
-                    <tr class="hover:bg-slate-50">
+                    <tr class="cursor-pointer hover:bg-slate-50" data-href="{{ route('responses.show', $response) }}">
                         <td class="px-3 py-2 text-slate-500">{{ $loop->iteration + ($responses->firstItem() - 1) }}</td>
                         <td class="px-3 py-2">
-                            <span class="block font-medium">{{ $response->customer?->name }}</span>
-                            <span class="text-xs text-slate-500">{{ $response->customer?->code }}</span>
+                            <a href="{{ route('responses.show', $response) }}" class="font-medium hover:underline">{{ $response->customer?->name }}</a>
+                            @if (filled($response->billing_category))
+                                <span class="ms-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{{ $response->billing_category }}</span>
+                            @endif
                         </td>
                         <td class="px-3 py-2">{{ $response->office?->name ?? '—' }}</td>
                         <td class="px-3 py-2">{{ $response->employee?->name ?? '—' }}</td>
-                        <td class="px-3 py-2">{{ $catalog->label($response->data_source_primary_option_id) ?? '—' }}</td>
                         <td class="px-3 py-2 whitespace-nowrap">
                             {{ $response->creation_minutes !== null ? $response->creation_minutes.' 分' : '—' }}
                         </td>
-                        <td class="px-3 py-2">{{ $catalog->label($response->dependency_option_id) ?? '—' }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-slate-600">{{ $response->created_at?->format('Y/m/d H:i') ?? '—' }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-slate-600">{{ $response->updated_at?->format('Y/m/d H:i') ?? '—' }}</td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">
-                            <a href="{{ route('responses.edit', $response) }}"
-                                class="text-slate-600 underline underline-offset-2 hover:text-slate-900">編集</a>
-
-                            <form method="POST" action="{{ route('responses.destroy', $response) }}" class="ms-2 inline"
-                                onsubmit="return confirm('この回答を削除します。よろしいですか？');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-rose-600 underline underline-offset-2 hover:text-rose-800">削除</button>
-                            </form>
+                            <div class="inline-flex items-center gap-2">
+                                <x-edit-button :href="route('responses.edit', $response)" />
+                                <x-delete-button :action="route('responses.destroy', $response)" confirm="この回答を削除します。よろしいですか？" />
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -125,4 +128,18 @@
     <div class="mt-4">
         {{ $responses->links() }}
     </div>
+
+    @push('scripts')
+        <script>
+            // A click anywhere on a row opens that answer, except on its own links and buttons,
+            // or when the click was the end of dragging to select text for copying.
+            document.querySelectorAll('tr[data-href]').forEach((row) => {
+                row.addEventListener('click', (event) => {
+                    if (! event.target.closest('a, button, form') && window.getSelection().isCollapsed) {
+                        window.location.href = row.dataset.href;
+                    }
+                });
+            });
+        </script>
+    @endpush
 </x-layout>

@@ -17,6 +17,7 @@ class SurveyResponseRequest extends FormRequest
         $rules = [
             'employee_id' => ['required', Rule::exists('employees', 'id')],
             'customer_id' => ['required', Rule::exists('customers', 'id')],
+            'billing_category' => ['nullable', 'string', 'max:50'],
             'office_id' => ['required', Rule::exists('offices', 'id')],
             'creation_minutes' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -37,6 +38,7 @@ class SurveyResponseRequest extends FormRequest
         $attributes = [
             'employee_id' => '請求書の作成担当者',
             'customer_id' => '顧客名',
+            'billing_category' => '作成区分',
             'office_id' => '営業所・拠点',
         ];
 

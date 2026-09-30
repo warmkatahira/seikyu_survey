@@ -10,6 +10,7 @@ use App\Models\SurveyResponse;
 use App\Models\User;
 use Database\Seeders\ChoiceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 use Tests\TestCase;
 
 class SurveyResponseTest extends TestCase
@@ -159,6 +160,103 @@ class SurveyResponseTest extends TestCase
             ->get(route('responses.index', ['customer_id' => $wanted->customer_id]))
             ->assertOk()
             ->assertViewHas('responses', fn ($responses) => $responses->pluck('id')->all() === [$wanted->id]);
+    }
+
+    public function test_the_list_shows_when_each_answer_was_given_and_last_updated(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 1)->setTime(9, 5));
+        $answer = SurveyResponse::factory()->create();
+
+        $this->travelTo(now()->setDate(2026, 10, 3)->setTime(14, 30));
+        $answer->update(['creation_minutes' => 60]);
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['回答日時', '更新日時', '2026/10/01 09:05', '2026/10/03 14:30'])
+            ->assertDontSee('自分以外に作成できる人');
+    }
+
+    public function test_the_list_downloads_as_an_excel_workbook_limited_to_the_current_filter(): void
+    {
+        $wanted = SurveyResponse::factory()
+            ->for(Customer::factory()->state(['code' => '1111', 'name' => '株式会社ＡＡＡＡ']))
+            ->create(['creation_minutes' => 45]);
+        SurveyResponse::factory()
+            ->for(Customer::factory()->state(['code' => '2222', 'name' => '株式会社ＢＢＢＢ']))
+            ->create();
+
+        $response = $this->actingAs($this->respondent())
+            ->get(route('responses.export', ['customer_id' => $wanted->customer_id]));
+
+        $response->assertOk()
+            ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            ->assertDownload();
+
+        $path = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($path, $response->streamedContent());
+
+        $reader = new XlsxReader;
+        $reader->open($path);
+        $rows = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            $this->assertSame('回答一覧', $sheet->getName());
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+        }
+        $reader->close();
+        unlink($path);
+
+        $this->assertCount(2, $rows, 'The heading row plus only the filtered answer.');
+        $this->assertSame(['No.', '顧客コード', '顧客名'], array_slice($rows[0], 0, 3));
+        $this->assertSame([1, '1111', '株式会社ＡＡＡＡ'], array_slice($rows[1], 0, 3));
+        $this->assertContains(45, $rows[1], '作成時間 stays a number Excel can sum.');
+    }
+
+    public function test_an_answer_can_be_read_without_opening_the_edit_form(): void
+    {
+        $answer = SurveyResponse::factory()
+            ->for(Customer::factory()->state(['code' => '1111', 'name' => '株式会社ＡＡＡＡ']))
+            ->create([
+                'storage_billing_method_option_id' => $this->option('storage_billing_method', 'per_pallet'),
+                'creation_minutes' => 45,
+                'notes' => "月末に手作業で集計している。\n繁忙期は2日かかる。",
+            ]);
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.index'))
+            ->assertSee('data-href="'.route('responses.show', $answer).'"', false);
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.show', $answer))
+            ->assertOk()
+            ->assertSee('株式会社ＡＡＡＡ')
+            ->assertSeeInOrder(['保管料の課金方式', 'パレット建て', '1社あたりの作成時間（分）', '45 分', '繁忙期は2日かかる。'])
+            ->assertSee('未回答')
+            ->assertDontSee('name="creation_minutes"', false);
+    }
+
+    public function test_one_customer_invoiced_separately_is_told_apart_by_its_billing_category(): void
+    {
+        $customer = Customer::factory()->create(['name' => '株式会社ＡＡＡＡ']);
+
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), [
+                'employee_id' => Employee::factory()->create()->id,
+                'customer_id' => $customer->id,
+                'billing_category' => '通販',
+                'office_id' => Office::factory()->create()->id,
+            ])
+            ->assertSessionHas('status', fn (string $status) => str_contains($status, '株式会社ＡＡＡＡ（通販）'));
+
+        $answer = SurveyResponse::query()->sole();
+        $this->assertSame('通販', $answer->billing_category);
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.show', $answer))
+            ->assertSee('株式会社ＡＡＡＡ（通販）')
+            ->assertSeeInOrder(['作成区分', '通販']);
     }
 
     public function test_an_answer_keeps_showing_an_option_that_was_later_deactivated(): void

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'employee_id',
     'customer_id',
+    'billing_category',
     'office_id',
     'storage_fee_option_id',
     'handling_fee_option_id',
@@ -197,6 +198,17 @@ class SurveyResponse extends Model
         return $grouped;
     }
 
+    /**
+     * The customer's name with the 作成区分 appended, e.g. 「株式会社ＡＡＡＡ（通販）」, so answers
+     * for separately invoiced lines of one customer can be told apart at a glance.
+     */
+    public function customerLabel(): string
+    {
+        $name = $this->customer?->name ?? '';
+
+        return filled($this->billing_category) ? "{$name}（{$this->billing_category}）" : $name;
+    }
+
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
@@ -216,6 +228,21 @@ class SurveyResponse extends Model
     protected function withMasters(Builder $query): Builder
     {
         return $query->with(['employee', 'customer', 'office']);
+    }
+
+    /**
+     * Narrows to the 回答一覧 filters; a null filter is not applied.
+     *
+     * @param  array{employee_id: ?int, customer_id: ?int, office_id: ?int}  $filters
+     */
+    #[Scope]
+    protected function filteredBy(Builder $query, array $filters): Builder
+    {
+        foreach ($filters as $column => $id) {
+            $query->when($id, fn (Builder $query) => $query->where($column, $id));
+        }
+
+        return $query;
     }
 
     protected function casts(): array

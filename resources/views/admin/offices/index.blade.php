@@ -29,14 +29,10 @@
                             <x-status-badge :active="$office->is_active" />
                         </td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">
-                            <a href="{{ route('admin.offices.edit', $office) }}"
-                                class="text-slate-600 underline underline-offset-2 hover:text-slate-900">編集</a>
-                            <form method="POST" action="{{ route('admin.offices.destroy', $office) }}" class="ms-2 inline"
-                                onsubmit="return confirm('「{{ $office->name }}」を削除します。よろしいですか？');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-rose-600 underline underline-offset-2 hover:text-rose-800">削除</button>
-                            </form>
+                            <div class="inline-flex items-center gap-2">
+                                <x-edit-button :href="route('admin.offices.edit', $office)" />
+                                <x-delete-button :action="route('admin.offices.destroy', $office)" :confirm="'「'.$office->name.'」を削除します。よろしいですか？'" />
+                            </div>
                         </td>
                     </tr>
                 @empty

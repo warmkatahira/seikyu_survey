@@ -21,8 +21,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::redirect('/', '/responses');
+    Route::get('/responses/excel', [SurveyResponseController::class, 'export'])->name('responses.export');
     Route::resource('responses', SurveyResponseController::class)
-        ->except('show')
         ->parameters(['responses' => 'response']);
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function (): void {

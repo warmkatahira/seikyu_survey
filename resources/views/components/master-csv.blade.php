@@ -13,7 +13,7 @@
             @csrf
             <div class="space-y-1">
                 <label for="file" class="block text-xs font-medium text-slate-600">CSVファイルを選択</label>
-                <input type="file" name="file" id="file" accept=".csv,text/csv" required
+                <input type="file" name="file" id="file" autocomplete="off" accept=".csv,text/csv" required
                     class="block text-sm file:me-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:text-white hover:file:bg-slate-700">
             </div>
             <button type="submit" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">

@@ -4,6 +4,7 @@
     <input type="hidden" name="{{ $name }}" value="0">
     <input
         type="checkbox"
+        autocomplete="off"
         name="{{ $name }}"
         id="{{ $name }}"
         value="1"

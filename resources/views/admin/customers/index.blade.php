@@ -27,14 +27,10 @@
                         <td class="px-3 py-2 text-slate-500">{{ $customer->sort_order }}</td>
                         <td class="px-3 py-2"><x-status-badge :active="$customer->is_active" /></td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">
-                            <a href="{{ route('admin.customers.edit', $customer) }}"
-                                class="text-slate-600 underline underline-offset-2 hover:text-slate-900">編集</a>
-                            <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}" class="ms-2 inline"
-                                onsubmit="return confirm('「{{ $customer->name }}」を削除します。よろしいですか？');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-rose-600 underline underline-offset-2 hover:text-rose-800">削除</button>
-                            </form>
+                            <div class="inline-flex items-center gap-2">
+                                <x-edit-button :href="route('admin.customers.edit', $customer)" />
+                                <x-delete-button :action="route('admin.customers.destroy', $customer)" :confirm="'「'.$customer->name.'」を削除します。よろしいですか？'" />
+                            </div>
                         </td>
                     </tr>
                 @empty

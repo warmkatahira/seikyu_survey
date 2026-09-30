@@ -21,18 +21,18 @@
                                 @csrf
                                 @method('PUT')
 
-                                <input type="text" name="label" value="{{ $option->label }}" required
+                                <input type="text" name="label" autocomplete="off" value="{{ $option->label }}" required
                                     class="min-w-60 flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm">
 
                                 <label class="flex items-center gap-1.5 text-xs text-slate-600">
                                     表示順
-                                    <input type="number" name="sort_order" value="{{ $option->sort_order }}" min="0"
+                                    <input type="number" name="sort_order" autocomplete="off" value="{{ $option->sort_order }}" min="0"
                                         class="w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm">
                                 </label>
 
                                 <label class="flex items-center gap-1.5 text-xs text-slate-600">
                                     <input type="hidden" name="is_active" value="0">
-                                    <input type="checkbox" name="is_active" value="1" @checked($option->is_active)
+                                    <input type="checkbox" name="is_active" autocomplete="off" value="1" @checked($option->is_active)
                                         class="size-4 rounded border-slate-300 text-slate-900">
                                     有効
                                 </label>
@@ -43,14 +43,8 @@
                                 </button>
                             </form>
 
-                            <form method="POST" action="{{ route('admin.choices.options.destroy', $option) }}"
-                                onsubmit="return confirm('「{{ $option->label }}」を削除します。よろしいですか？');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-xs text-rose-600 underline underline-offset-2 hover:text-rose-800">
-                                    削除
-                                </button>
-                            </form>
+                            <x-delete-button :action="route('admin.choices.options.destroy', $option)"
+                                :confirm="'「'.$option->label.'」を削除します。よろしいですか？'" />
                         </div>
                     @endforeach
                 </div>
@@ -58,11 +52,11 @@
                 <form method="POST" action="{{ route('admin.choices.options.store', $category) }}"
                     class="mt-3 flex flex-wrap items-center gap-3">
                     @csrf
-                    <input type="text" name="label" placeholder="選択肢を追加" required
+                    <input type="text" name="label" autocomplete="off" placeholder="選択肢を追加" required
                         class="min-w-60 flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm">
                     <label class="flex items-center gap-1.5 text-xs text-slate-600">
                         表示順
-                        <input type="number" name="sort_order" value="{{ ($category->options->max('sort_order') ?? 0) + 10 }}"
+                        <input type="number" name="sort_order" autocomplete="off" value="{{ ($category->options->max('sort_order') ?? 0) + 10 }}"
                             min="0" class="w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm">
                     </label>
                     <input type="hidden" name="is_active" value="1">
