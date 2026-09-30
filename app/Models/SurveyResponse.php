@@ -46,9 +46,9 @@ class SurveyResponse extends Model
         'basic' => '基本情報',
         'billing_items' => '請求項目の構成（請求書鑑に載せている項目）',
         'detail_sheet' => '別紙明細',
-        'data_source' => '★実績データの取得方法',
+        'data_source' => '実績データの取得方法',
         'pricing' => '単価・作成方法',
-        'workload' => '★工数・属人度',
+        'workload' => '工数・属人度',
         'free_text' => '自由記述',
     ];
 
