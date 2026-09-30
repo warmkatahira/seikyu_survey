@@ -21,7 +21,7 @@
             <tbody class="divide-y divide-slate-100">
                 @forelse ($customers as $customer)
                     <tr class="hover:bg-slate-50">
-                        <td class="px-3 py-2 font-mono text-xs">{{ $customer->code }}</td>
+                        <td class="px-3 py-2 text-xs">{{ $customer->code }}</td>
                         <td class="px-3 py-2 font-medium">{{ $customer->name }}</td>
                         <td class="px-3 py-2 text-slate-500">{{ $customer->survey_responses_count }}</td>
                         <td class="px-3 py-2 text-slate-500">{{ $customer->sort_order }}</td>

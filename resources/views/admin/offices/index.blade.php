@@ -21,7 +21,7 @@
             <tbody class="divide-y divide-slate-100">
                 @forelse ($offices as $office)
                     <tr class="hover:bg-slate-50">
-                        <td class="px-3 py-2 font-mono text-xs">{{ $office->code }}</td>
+                        <td class="px-3 py-2 text-xs">{{ $office->code }}</td>
                         <td class="px-3 py-2 font-medium">{{ $office->name }}</td>
                         <td class="px-3 py-2 text-slate-500">{{ $office->employees_count }}</td>
                         <td class="px-3 py-2 text-slate-500">{{ $office->sort_order }}</td>
