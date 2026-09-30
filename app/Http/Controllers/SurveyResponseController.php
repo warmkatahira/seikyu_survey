@@ -10,6 +10,7 @@ use App\Models\SurveyResponse;
 use App\Support\ChoiceCatalog;
 use App\Support\SurveyResponseSheet;
 use App\Support\Xlsx;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -76,15 +77,17 @@ class SurveyResponseController extends Controller
         return view('responses.create', $this->formData($response));
     }
 
-    public function store(SurveyResponseRequest $request): RedirectResponse
+    public function store(SurveyResponseRequest $request): RedirectResponse|JsonResponse
     {
         $response = SurveyResponse::create($request->validated());
 
         $request->session()->put(self::LAST_EMPLOYEE_KEY, $response->employee_id);
 
-        return redirect()
-            ->route('responses.create')
-            ->with('status', "「{$response->customerLabel()}」の回答を登録しました。続けて次の顧客を入力できます。");
+        return $this->saved(
+            $request,
+            route('responses.create'),
+            "「{$response->customerLabel()}」の回答を登録しました。続けて次の顧客を入力できます。",
+        );
     }
 
     public function show(Request $request, SurveyResponse $response): View
@@ -104,13 +107,11 @@ class SurveyResponseController extends Controller
         return view('responses.edit', $this->formData($response));
     }
 
-    public function update(SurveyResponseRequest $request, SurveyResponse $response): RedirectResponse
+    public function update(SurveyResponseRequest $request, SurveyResponse $response): RedirectResponse|JsonResponse
     {
         $response->update($request->validated());
 
-        return redirect()
-            ->route('responses.index')
-            ->with('status', "「{$response->customerLabel()}」の回答を更新しました。");
+        return $this->saved($request, route('responses.index'), "「{$response->customerLabel()}」の回答を更新しました。");
     }
 
     public function destroy(SurveyResponse $response): RedirectResponse
@@ -122,6 +123,22 @@ class SurveyResponseController extends Controller
         return redirect()
             ->route('responses.index')
             ->with('status', "「{$customerName}」の回答を削除しました。");
+    }
+
+    /**
+     * Where to go after saving, with the message to show there. The answer form sends in the
+     * background (so its sending animation can play out) and navigates itself, so it gets the
+     * address as JSON; the message is flashed now and shown on that next page.
+     */
+    private function saved(Request $request, string $url, string $status): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            $request->session()->flash('status', $status);
+
+            return response()->json(['redirect' => $url]);
+        }
+
+        return redirect($url)->with('status', $status);
     }
 
     /**

@@ -43,6 +43,7 @@ class SurveyResponseTest extends TestCase
             'storage_fee_option_id' => $this->option('presence', 'yes'),
             'data_source_primary_option_id' => $this->option('data_source', 'excel_own'),
             'dependency_option_id' => $this->option('dependency', 'none_only_me'),
+            'digitization_request_option_id' => $this->option('yes_no', 'yes'),
             'creation_minutes' => 45,
             'notes' => '保管日数の集計を手で数えている。',
         ]);
@@ -53,9 +54,27 @@ class SurveyResponseTest extends TestCase
             'employee_id' => $employee->id,
             'customer_id' => $customer->id,
             'office_id' => $office->id,
+            'digitization_request_option_id' => $this->option('yes_no', 'yes'),
             'creation_minutes' => 45,
             'notes' => '保管日数の集計を手で数えている。',
         ]);
+    }
+
+    public function test_the_answer_form_sent_in_the_background_is_told_where_to_go_next(): void
+    {
+        $customer = Customer::factory()->create(['name' => '株式会社ＡＡＡＡ']);
+
+        $this->actingAs($this->respondent())
+            ->postJson(route('responses.store'), [
+                'employee_id' => Employee::factory()->create()->id,
+                'customer_id' => $customer->id,
+                'office_id' => Office::factory()->create()->id,
+            ])
+            ->assertOk()
+            ->assertExactJson(['redirect' => route('responses.create')])
+            ->assertSessionHas('status', fn (string $status) => str_contains($status, '株式会社ＡＡＡＡ'));
+
+        $this->assertDatabaseCount('survey_responses', 1);
     }
 
     public function test_the_answer_form_remembers_the_employee_who_answered_last(): void

@@ -3,7 +3,11 @@
     $sections = App\Models\SurveyResponse::SECTIONS;
 @endphp
 
-<form method="POST" action="{{ $action }}" class="space-y-5">
+<div class="mb-4">
+    <a href="{{ route('responses.index') }}" class="text-sm text-slate-600 underline underline-offset-2 hover:text-slate-900">← 回答一覧に戻る</a>
+</div>
+
+<form method="POST" action="{{ $action }}" class="space-y-5" data-send-form>
     @csrf
     @if ($response->exists)
         @method('PUT')
@@ -78,14 +82,14 @@
     @endforeach
 
     <div class="flex flex-wrap items-center gap-3">
-        <button type="submit"
-            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
-            {{ $response->exists ? '更新する' : '登録する' }}
+        {{-- Styled as "send": a filled accent pill with a paper-plane, distinct from the grey utility buttons. --}}
+        <button type="submit" data-send-button
+            class="send-button group inline-flex items-center gap-2 rounded-full bg-emerald-600 px-7 py-2.5 text-sm font-semibold tracking-wide text-white shadow-md shadow-emerald-600/25 transition hover:bg-emerald-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 active:translate-y-px">
+            <span data-send-label>{{ $response->exists ? '更新する' : '回答する' }}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="send-plane size-4 transition group-hover:translate-x-0.5" aria-hidden="true">
+                <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
+            </svg>
         </button>
-
-        <a href="{{ route('responses.index') }}" class="text-sm text-slate-600 underline underline-offset-2 hover:text-slate-900">
-            回答一覧に戻る
-        </a>
     </div>
 </form>
 
@@ -112,6 +116,83 @@
             if (officeId && officeSelect.dataset.officePicked !== 'true') {
                 officeSelect.value = officeId;
             }
+        });
+
+        // Sending: a veil stops anything else being clicked and the button's paper plane takes
+        // off. The answer goes in the background so the flight shows for at least
+        // SEND_MIN_MS, or for as long as saving takes if that is longer. If the server
+        // rejects the answer (validation) or cannot be reached, the form is sent the ordinary
+        // way instead, so the page comes back with its error messages as before.
+        const SEND_MIN_MS = 2000;
+
+        document.addEventListener('submit', async (event) => {
+            const form = event.target.closest('[data-send-form]');
+            const button = form?.querySelector('[data-send-button]');
+
+            if (! button) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (button.dataset.sending === 'true') {
+                return;
+            }
+
+            const veil = document.createElement('div');
+            veil.className = 'send-veil';
+            veil.dataset.sendVeil = '';
+            veil.innerHTML = `
+                <div class="send-card" role="status">
+                    <div class="send-sky" aria-hidden="true">
+                        <span class="send-cloud"></span><span class="send-cloud"></span><span class="send-cloud"></span>
+                        <span class="send-wind"></span><span class="send-wind"></span><span class="send-wind"></span>
+                        <svg class="send-flyer" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
+                        </svg>
+                    </div>
+                    <p class="send-message">回答を送信しています</p>
+                </div>`;
+            document.body.append(veil);
+
+            const label = button.querySelector('[data-send-label]');
+            button.dataset.sending = 'true';
+            button.dataset.idleLabel = label.textContent;
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            label.textContent = '送信中…';
+
+            const minimum = new Promise((resolve) => setTimeout(resolve, SEND_MIN_MS));
+            const saving = fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            })
+                .then(async (response) => (response.ok ? (await response.json()).redirect : null))
+                .catch(() => null);
+
+            const [redirect] = await Promise.all([saving, minimum]);
+
+            if (redirect) {
+                window.location.assign(redirect);
+            } else {
+                form.submit();
+            }
+        });
+
+        // Coming back with the browser's Back button can restore the page mid-send; reset it.
+        window.addEventListener('pageshow', (event) => {
+            if (! event.persisted) {
+                return;
+            }
+
+            document.querySelectorAll('[data-send-veil]').forEach((veil) => veil.remove());
+            document.querySelectorAll('[data-send-button][data-sending]').forEach((button) => {
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
+                button.querySelector('[data-send-label]').textContent = button.dataset.idleLabel;
+                delete button.dataset.sending;
+            });
         });
     </script>
 @endPushOnce

@@ -17,7 +17,7 @@
     </div>
 
     <div class="mb-4 flex flex-wrap items-end gap-3">
-        <form method="GET" action="{{ route('responses.index') }}" class="flex flex-wrap items-end gap-3">
+        <form method="GET" action="{{ route('responses.index') }}" class="flex flex-wrap items-end gap-3" data-live-filter>
             <div class="space-y-1">
                 <label for="employee_id" class="block text-xs font-medium text-slate-600">回答者で絞り込む</label>
                 <select name="employee_id" id="employee_id" data-searchable
@@ -55,12 +55,8 @@
                 </select>
             </div>
 
-            <button type="submit" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">
-                絞り込む
-            </button>
-
             @if ($employeeId || $customerId || $officeId)
-                <a href="{{ route('responses.index') }}" class="text-sm text-slate-600 underline underline-offset-2">解除</a>
+                <a href="{{ route('responses.index') }}" class="pb-2 text-sm text-slate-600 underline underline-offset-2">解除</a>
             @endif
         </form>
 
@@ -92,7 +88,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($responses as $response)
-                    <tr class="cursor-pointer hover:bg-slate-50" data-href="{{ route('responses.show', $response) }}">
+                    <tr class="cursor-pointer transition-colors hover:bg-emerald-100" data-href="{{ route('responses.show', $response) }}">
                         <td class="px-3 py-2 text-slate-500">{{ $loop->iteration + ($responses->firstItem() - 1) }}</td>
                         <td class="px-3 py-2">
                             <a href="{{ route('responses.show', $response) }}" class="font-medium hover:underline">{{ $response->customer?->name }}</a>
@@ -131,6 +127,15 @@
 
     @push('scripts')
         <script>
+            // The list follows the filters as soon as one is changed; there is no 絞り込む button.
+            // Only the filters actually set go into the address, so it stays short and shareable.
+            document.querySelector('[data-live-filter]')?.addEventListener('change', (event) => {
+                const form = event.currentTarget;
+                const query = new URLSearchParams([...new FormData(form)].filter(([, value]) => value !== ''));
+
+                window.location.assign(query.size ? `${form.action}?${query}` : form.action);
+            });
+
             // A click anywhere on a row opens that answer, except on its own links and buttons,
             // or when the click was the end of dragging to select text for copying.
             document.querySelectorAll('tr[data-href]').forEach((row) => {

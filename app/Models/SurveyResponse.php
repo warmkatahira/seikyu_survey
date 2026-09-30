@@ -29,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'copy_previous_month_option_id',
     'irregular_frequency_option_id',
     'dependency_option_id',
+    'digitization_request_option_id',
     'creation_minutes',
     'notes',
 ])]
@@ -49,6 +50,7 @@ class SurveyResponse extends Model
         'data_source' => '実績データの取得方法',
         'pricing' => '単価・作成方法',
         'workload' => '工数・属人度',
+        'customer_request' => '顧客からの要望',
         'free_text' => '自由記述',
     ];
 
@@ -155,6 +157,13 @@ class SurveyResponse extends Model
             'type' => 'choice',
             'category' => 'dependency',
             'hint' => 'ご自身が不在のとき、同じ請求書を作成できる人がいるかどうかです。',
+        ],
+        'digitization_request_option_id' => [
+            'section' => 'customer_request',
+            'label' => '請求書の電子化の要望',
+            'type' => 'choice',
+            'category' => 'yes_no',
+            'hint' => '弊社から出している請求書を電子化してほしい、という話を顧客から受けたことがあるかどうかです。',
         ],
         'notes' => [
             'section' => 'free_text',

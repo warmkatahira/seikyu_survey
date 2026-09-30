@@ -52,3 +52,215 @@
         cursor: not-allowed;
     }
 }
+
+/*
+ * 回答する / 更新する while sending: a veil over the page blocks every other control and holds
+ * a card in the middle of the screen where a paper plane flies on through passing clouds and
+ * wind lines. The button stays on top, reads 送信中…, and its own little plane takes off.
+ * It is shown for at least two seconds (see the answer form's script).
+ */
+.send-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    background: rgb(248 250 252 / 0.65);
+    backdrop-filter: blur(3px);
+    cursor: progress;
+    animation: send-fade-in 200ms ease-out both;
+}
+
+.send-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.75rem 2.5rem 1.5rem;
+    border-radius: 1.25rem;
+    background: white;
+    box-shadow:
+        0 20px 45px -12px rgb(15 23 42 / 0.25),
+        0 0 0 1px rgb(15 23 42 / 0.05);
+    animation: send-card-in 350ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.send-sky {
+    position: relative;
+    width: 13rem;
+    height: 7.5rem;
+    overflow: hidden;
+    border-radius: 0.9rem;
+    background: linear-gradient(180deg, #e0f2fe 0%, #f0fdf4 100%);
+}
+
+.send-cloud {
+    position: absolute;
+    left: 100%;
+    height: 0.9rem;
+    border-radius: 9999px;
+    background: white;
+    box-shadow: 0.55rem -0.4rem 0 0.05rem white;
+    animation: send-drift linear infinite;
+}
+
+.send-cloud:nth-child(1) {
+    top: 18%;
+    width: 2.6rem;
+    animation-duration: 3.2s;
+}
+
+.send-cloud:nth-child(2) {
+    top: 62%;
+    width: 1.9rem;
+    animation-duration: 2.4s;
+    animation-delay: -1.3s;
+}
+
+.send-cloud:nth-child(3) {
+    top: 40%;
+    width: 3.2rem;
+    opacity: 0.7;
+    animation-duration: 4.1s;
+    animation-delay: -2.6s;
+}
+
+.send-wind {
+    position: absolute;
+    left: 100%;
+    height: 2px;
+    width: 1.8rem;
+    border-radius: 9999px;
+    background: rgb(5 150 105 / 0.35);
+    animation: send-drift 0.9s linear infinite;
+}
+
+.send-wind:nth-child(4) {
+    top: 47%;
+    animation-delay: -0.2s;
+}
+
+.send-wind:nth-child(5) {
+    top: 57%;
+    width: 1.2rem;
+    animation-delay: -0.55s;
+}
+
+.send-wind:nth-child(6) {
+    top: 67%;
+    animation-delay: -0.75s;
+}
+
+.send-flyer {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: -1.375rem 0 0 -1.375rem;
+    color: #059669;
+    filter: drop-shadow(0 6px 6px rgb(5 150 105 / 0.25));
+    animation: send-bob 1.6s ease-in-out infinite alternate;
+}
+
+.send-message {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    letter-spacing: 0.05em;
+}
+
+.send-message::after {
+    content: '';
+    display: inline-block;
+    width: 1.2em;
+    text-align: left;
+    animation: send-dots 1.2s steps(4, end) infinite;
+}
+
+.send-button[data-sending] {
+    position: relative;
+    z-index: 50;
+    cursor: progress;
+}
+
+.send-button[data-sending] .send-plane {
+    animation:
+        send-plane-takeoff 600ms cubic-bezier(0.5, 0, 0.75, 0) both,
+        send-plane-loop 1300ms cubic-bezier(0.45, 0, 0.55, 1) 600ms infinite;
+}
+
+@keyframes send-fade-in {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes send-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.94);
+    }
+}
+
+@keyframes send-drift {
+    to {
+        transform: translateX(-17rem);
+    }
+}
+
+@keyframes send-bob {
+    from {
+        transform: translate(-6px, 7px) rotate(-4deg);
+    }
+    to {
+        transform: translate(6px, -7px) rotate(-14deg);
+    }
+}
+
+@keyframes send-dots {
+    0% {
+        content: '';
+    }
+    25% {
+        content: '.';
+    }
+    50% {
+        content: '..';
+    }
+    75% {
+        content: '...';
+    }
+}
+
+@keyframes send-plane-takeoff {
+    0% {
+        transform: translate(0, 0) rotate(0);
+    }
+    25% {
+        transform: translate(-5px, 2px) rotate(8deg);
+    }
+    100% {
+        transform: translate(90px, -70px) rotate(-28deg) scale(0.6);
+        opacity: 0;
+    }
+}
+
+@keyframes send-plane-loop {
+    0% {
+        transform: translate(-10px, 6px) rotate(-10deg) scale(0.6);
+        opacity: 0;
+    }
+    30% {
+        transform: translate(0, 0) rotate(-14deg) scale(1);
+        opacity: 1;
+    }
+    60% {
+        transform: translate(12px, -6px) rotate(-18deg) scale(0.95);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(90px, -70px) rotate(-28deg) scale(0.6);
+        opacity: 0;
+    }
+}
