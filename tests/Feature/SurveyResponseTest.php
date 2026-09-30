@@ -81,10 +81,10 @@ class SurveyResponseTest extends TestCase
             ->post(route('responses.store'), [
                 'employee_id' => $employee->id,
                 'customer_id' => $customer->id,
-                // A 締め日 option offered where the 保管料の課金方式 dropdown is expected.
-                'storage_billing_method_option_id' => $this->option('closing_day', 'month_end'),
+                // A 自分以外に作成できる人 option offered where the 締め日 dropdown is expected.
+                'closing_day_option_id' => $this->option('dependency', 'unknown'),
             ])
-            ->assertSessionHasErrors('storage_billing_method_option_id');
+            ->assertSessionHasErrors('closing_day_option_id');
 
         $this->assertDatabaseCount('survey_responses', 0);
     }
@@ -219,7 +219,7 @@ class SurveyResponseTest extends TestCase
         $answer = SurveyResponse::factory()
             ->for(Customer::factory()->state(['code' => '1111', 'name' => '株式会社ＡＡＡＡ']))
             ->create([
-                'storage_billing_method_option_id' => $this->option('storage_billing_method', 'per_pallet'),
+                'closing_day_option_id' => $this->option('closing_day', 'month_end'),
                 'creation_minutes' => 45,
                 'notes' => "月末に手作業で集計している。\n繁忙期は2日かかる。",
             ]);
@@ -232,7 +232,7 @@ class SurveyResponseTest extends TestCase
             ->get(route('responses.show', $answer))
             ->assertOk()
             ->assertSee('株式会社ＡＡＡＡ')
-            ->assertSeeInOrder(['保管料の課金方式', 'パレット建て', '1社あたりの作成時間（分）', '45 分', '繁忙期は2日かかる。'])
+            ->assertSeeInOrder(['締め日', '月末', '1社あたりの作成時間（分）', '45 分', '繁忙期は2日かかる。'])
             ->assertSee('未回答')
             ->assertDontSee('name="creation_minutes"', false);
     }
@@ -261,15 +261,15 @@ class SurveyResponseTest extends TestCase
 
     public function test_an_answer_keeps_showing_an_option_that_was_later_deactivated(): void
     {
-        $deactivated = ChoiceOption::query()->firstWhere('value', 'per_pallet');
-        $answer = SurveyResponse::factory()->create(['storage_billing_method_option_id' => $deactivated->id]);
+        $deactivated = ChoiceOption::query()->find($this->option('closing_day', 'month_end'));
+        $answer = SurveyResponse::factory()->create(['closing_day_option_id' => $deactivated->id]);
 
         $deactivated->update(['is_active' => false]);
 
         $this->actingAs($this->respondent())
             ->get(route('responses.edit', $answer))
             ->assertOk()
-            ->assertSee('パレット建て（無効）');
+            ->assertSee('月末（無効）');
     }
 
     private function respondent(): User

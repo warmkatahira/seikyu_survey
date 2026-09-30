@@ -28,21 +28,6 @@ class ChoiceSeeder extends Seeder
                 'no' => 'なし',
             ],
         ],
-        'storage_billing_method' => [
-            'name' => '保管料の課金方式',
-            'options' => [
-                'three_period_month_end' => '三期制（月末締め）',
-                'three_period_20' => '三期制（20日締め）',
-                'three_period_10' => '三期制（10日締め）',
-                'daily_prorated' => '日割',
-                'monthly_fixed' => '月額固定',
-                'per_tsubo' => '坪建て',
-                'per_pallet' => 'パレット建て',
-                'per_piece' => '個建て（ピース）',
-                'other' => 'その他',
-                'none' => '保管料なし',
-            ],
-        ],
         'closing_day' => [
             'name' => '締め日',
             'options' => [

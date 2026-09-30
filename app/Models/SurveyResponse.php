@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'handling_fee_option_id',
     'freight_fee_option_id',
     'other_work_option_id',
-    'storage_billing_method_option_id',
     'closing_day_option_id',
     'detail_presence_option_id',
     'detail_format_option_id',
@@ -45,12 +44,11 @@ class SurveyResponse extends Model
      */
     public const SECTIONS = [
         'basic' => '基本情報',
-        'billing_items' => '請求項目の構成（請求書に載せている項目）',
-        'storage' => '保管料・締め',
+        'billing_items' => '請求項目の構成（請求書鑑に載せている項目）',
         'detail_sheet' => '別紙明細',
-        'data_source' => '★実績データの取得方法（最重要）',
+        'data_source' => '★実績データの取得方法',
         'pricing' => '単価・作成方法',
-        'workload' => '★工数・属人度（最重要）',
+        'workload' => '★工数・属人度',
         'free_text' => '自由記述',
     ];
 
@@ -88,14 +86,8 @@ class SurveyResponse extends Model
             'type' => 'choice',
             'category' => 'presence',
         ],
-        'storage_billing_method_option_id' => [
-            'section' => 'storage',
-            'label' => '保管料の課金方式',
-            'type' => 'choice',
-            'category' => 'storage_billing_method',
-        ],
         'closing_day_option_id' => [
-            'section' => 'storage',
+            'section' => 'basic',
             'label' => '締め日',
             'type' => 'choice',
             'category' => 'closing_day',
@@ -162,7 +154,7 @@ class SurveyResponse extends Model
             'label' => '自分以外に作成できる人',
             'type' => 'choice',
             'category' => 'dependency',
-            'hint' => 'ご自身が不在のとき、同じ請求書を作成できる人がいるかどうかです。「いない」が悪いという意味ではなく、会社としてリスクのある顧客を把握するための項目です。',
+            'hint' => 'ご自身が不在のとき、同じ請求書を作成できる人がいるかどうかです。',
         ],
         'notes' => [
             'section' => 'free_text',
