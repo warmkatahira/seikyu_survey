@@ -1,6 +1,7 @@
 @php
     $fieldsBySection = App\Models\SurveyResponse::fieldsBySection();
     $sections = App\Models\SurveyResponse::SECTIONS;
+    $groups = App\Models\SurveyResponse::GROUPS;
 @endphp
 
 <div class="mb-4">
@@ -43,13 +44,13 @@
             </x-field>
 
             <x-field name="customer_id" label="顧客名" required
-                hint="請求書を作成している顧客を選んでください。1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録し、「作成区分」で区別してください。">
-                <x-select name="customer_id" :selected="$response->customer_id" placeholder="顧客名・顧客コードを入力して検索"
+                hint="請求書を作成している顧客を選んでください。1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録し、「作成区分」で区別してください。顧客名の後ろの（）は、その顧客についてすでに登録されている回答の件数です。">
+                <x-select name="customer_id" :selected="$response->customer_id" placeholder="顧客名を入力して検索"
                     data-searchable>
                     @foreach ($customers as $customer)
                         <option value="{{ $customer->id }}"
                             @selected((int) old('customer_id', $response->customer_id) === $customer->id)>
-                            {{ $customer->code }}：{{ $customer->name }}
+                            {{ $customer->name }}{{ $customer->survey_responses_count > 0 ? "（回答 {$customer->survey_responses_count}件）" : '（未回答）' }}
                         </option>
                     @endforeach
                 </x-select>
@@ -61,23 +62,29 @@
                     placeholder="例：通販" class="sm:max-w-60" />
             </x-field>
 
-            @foreach ($fieldsBySection['basic'] ?? [] as $name => $field)
+            @foreach ($fieldsBySection['basic'][''] ?? [] as $name => $field)
                 @include('responses.partials.answer-field')
             @endforeach
         </div>
     </x-section-card>
 
     @foreach ($sections as $sectionKey => $sectionLabel)
-        @continue($sectionKey === 'basic')
-        @php($fields = $fieldsBySection[$sectionKey] ?? [])
-        @continue($fields === [])
+        @continue($sectionKey === 'basic' || empty($fieldsBySection[$sectionKey]))
 
-        <x-section-card :title="$sectionLabel">
-            <div class="grid gap-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
-                @foreach ($fields as $name => $field)
-                    @include('responses.partials.answer-field')
-                @endforeach
-            </div>
+        <x-section-card :title="$sectionLabel" class="space-y-6">
+            @foreach ($fieldsBySection[$sectionKey] as $groupKey => $fields)
+                <div>
+                    @if ($groupKey !== '')
+                        <h3 class="mb-3 border-l-4 border-emerald-500 pl-2 text-sm font-semibold text-slate-700">{{ $groups[$groupKey] }}</h3>
+                    @endif
+
+                    <div class="grid gap-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
+                        @foreach ($fields as $name => $field)
+                            @include('responses.partials.answer-field')
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
         </x-section-card>
     @endforeach
 

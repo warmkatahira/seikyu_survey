@@ -50,21 +50,25 @@
             </div>
         </x-section-card>
 
-        @foreach ([
-            ['実績データの出どころ（主）', $byDataSource],
-            ['自分以外に作成できる人', $byDependency],
-            ['実績の記録タイミング', $byRecordTiming],
-        ] as [$breakdownTitle, $breakdown])
+        @foreach ($breakdowns as $breakdownTitle => $breakdown)
             <x-section-card :title="$breakdownTitle">
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="text-left text-xs text-slate-600">
+                        <tr>
+                            <th class="py-2 font-medium"></th>
+                            <th class="py-2 text-right font-medium">鑑</th>
+                            <th class="py-2 text-right font-medium">明細</th>
+                        </tr>
+                    </thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse ($breakdown as $row)
                             <tr>
                                 <td class="py-2">{{ $row->label }}</td>
-                                <td class="py-2 text-right whitespace-nowrap">{{ number_format($row->count) }} 件</td>
+                                <td class="py-2 ps-3 text-right whitespace-nowrap">{{ number_format($row->cover) }} 件</td>
+                                <td class="py-2 ps-3 text-right whitespace-nowrap">{{ number_format($row->detail) }} 件</td>
                             </tr>
                         @empty
-                            <tr><td class="py-6 text-center text-slate-500">まだ回答がありません。</td></tr>
+                            <tr><td colspan="3" class="py-6 text-center text-slate-500">まだ回答がありません。</td></tr>
                         @endforelse
                     </tbody>
                 </table>

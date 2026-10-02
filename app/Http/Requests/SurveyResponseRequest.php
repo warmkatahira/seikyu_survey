@@ -20,11 +20,17 @@ class SurveyResponseRequest extends FormRequest
             'billing_category' => ['nullable', 'string', 'max:50'],
             'office_id' => ['required', Rule::exists('offices', 'id')],
             'creation_minutes' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'detail_creation_minutes' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
 
         foreach (SurveyResponse::choiceFields() as $field => $definition) {
             $rules[$field] = ['nullable', Rule::in($catalog->optionIds($definition['category']))];
+        }
+
+        foreach (SurveyResponse::multiChoiceFields() as $field => $definition) {
+            $rules[$field] = ['nullable', 'array'];
+            $rules["{$field}.*"] = ['distinct', Rule::in($catalog->optionIds($definition['category']))];
         }
 
         return $rules;
@@ -42,8 +48,8 @@ class SurveyResponseRequest extends FormRequest
             'office_id' => '営業所・拠点',
         ];
 
-        foreach (SurveyResponse::FIELDS as $field => $definition) {
-            $attributes[$field] = $definition['label'];
+        foreach (array_keys(SurveyResponse::FIELDS) as $field) {
+            $attributes[$field] = $attributes["{$field}.*"] = SurveyResponse::columnLabel($field);
         }
 
         return $attributes;

@@ -40,7 +40,7 @@ class SurveyResponseTest extends TestCase
             'employee_id' => $employee->id,
             'customer_id' => $customer->id,
             'office_id' => $office->id,
-            'storage_fee_option_id' => $this->option('presence', 'yes'),
+            'cover_item_ids' => [$this->option('billing_item', 'storage')],
             'data_source_primary_option_id' => $this->option('data_source', 'excel_own'),
             'dependency_option_id' => $this->option('dependency', 'none_only_me'),
             'digitization_request_option_id' => $this->option('yes_no', 'yes'),
@@ -251,7 +251,7 @@ class SurveyResponseTest extends TestCase
             ->get(route('responses.show', $answer))
             ->assertOk()
             ->assertSee('株式会社ＡＡＡＡ')
-            ->assertSeeInOrder(['締め日', '月末', '1社あたりの作成時間（分）', '45 分', '繁忙期は2日かかる。'])
+            ->assertSeeInOrder(['締め日', '月末', '鑑について', '作成時間（分）', '45 分', '明細について', '繁忙期は2日かかる。'])
             ->assertSee('未回答')
             ->assertDontSee('name="creation_minutes"', false);
     }
@@ -289,6 +289,97 @@ class SurveyResponseTest extends TestCase
             ->get(route('responses.edit', $answer))
             ->assertOk()
             ->assertSee('月末（無効）');
+    }
+
+    public function test_the_form_asks_about_the_cover_and_the_detail_separately(): void
+    {
+        $this->actingAs($this->respondent())
+            ->get(route('responses.create'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                '基本情報',
+                '鑑について', '鑑に載せている項目', '保管', '荷役', '運賃',
+                '実績データの取得方法', '単価・作成方法', '工数・属人度',
+                '明細について', '作成している明細', '保管', '荷役', '運賃',
+                '実績データの取得方法', '単価・作成方法', '工数・属人度',
+                '顧客からの要望', '自由記述',
+            ])
+            ->assertSee('name="cover_item_ids[]"', false)
+            ->assertSee('name="detail_item_ids[]"', false)
+            ->assertDontSee('name="storage_fee_option_id"', false)
+            ->assertSee('name="detail_creation_minutes"', false)
+            ->assertDontSee('別紙明細の有無');
+    }
+
+    public function test_billing_items_are_ticked_separately_for_the_cover_and_the_detail(): void
+    {
+        $storage = $this->option('billing_item', 'storage');
+        $handling = $this->option('billing_item', 'handling');
+        $freight = $this->option('billing_item', 'freight');
+        $base = [
+            'employee_id' => Employee::factory()->create()->id,
+            'customer_id' => Customer::factory()->create()->id,
+            'office_id' => Office::factory()->create()->id,
+        ];
+
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), $base + [
+                'cover_item_ids' => [$storage, $handling, $freight],
+                'detail_item_ids' => [$freight, $storage],
+                'creation_minutes' => 15,
+                'detail_creation_minutes' => 60,
+                'dependency_option_id' => $this->option('dependency', 'two_or_more'),
+                'detail_dependency_option_id' => $this->option('dependency', 'none_only_me'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $answer = SurveyResponse::query()->sole();
+        $this->assertSame([$storage, $handling, $freight], $answer->cover_item_ids);
+        $this->assertSame([$storage, $freight], $answer->detail_item_ids);
+        $this->assertSame(75, $answer->totalMinutes());
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.show', $answer))
+            ->assertSeeInOrder(['鑑に載せている項目', '保管、荷役、運賃', '作成している明細', '保管、運賃']);
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.index'))
+            ->assertViewHas('totals', ['answered' => 1, 'minutes' => 75, 'sole_owner' => 1]);
+
+        $this->actingAs($this->respondent())
+            ->put(route('responses.update', $answer), $base + ['cover_item_ids' => [$handling]])
+            ->assertSessionHasNoErrors();
+
+        $answer->refresh();
+        $this->assertSame([$handling], $answer->cover_item_ids);
+        $this->assertSame([], $answer->detail_item_ids);
+    }
+
+    public function test_an_option_from_another_dropdown_cannot_be_ticked_as_a_billing_item(): void
+    {
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), [
+                'employee_id' => Employee::factory()->create()->id,
+                'customer_id' => Customer::factory()->create()->id,
+                'office_id' => Office::factory()->create()->id,
+                'detail_item_ids' => [$this->option('closing_day', 'month_end')],
+            ])
+            ->assertSessionHasErrors('detail_item_ids.0');
+
+        $this->assertDatabaseCount('survey_responses', 0);
+    }
+
+    public function test_the_customer_dropdown_shows_how_many_answers_each_customer_already_has(): void
+    {
+        $answered = Customer::factory()->create(['code' => '1111', 'name' => '株式会社ＡＡＡＡ', 'sort_order' => 10]);
+        Customer::factory()->create(['code' => '2222', 'name' => '株式会社ＢＢＢＢ', 'sort_order' => 20]);
+        SurveyResponse::factory()->count(2)->for($answered)->create();
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.create'))
+            ->assertOk()
+            ->assertSeeInOrder(['株式会社ＡＡＡＡ（回答 2件）', '株式会社ＢＢＢＢ（未回答）'])
+            ->assertDontSee('1111：');
     }
 
     private function respondent(): User

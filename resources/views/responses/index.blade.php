@@ -99,7 +99,12 @@
                         <td class="px-3 py-2">{{ $response->office?->name ?? '—' }}</td>
                         <td class="px-3 py-2">{{ $response->employee?->name ?? '—' }}</td>
                         <td class="px-3 py-2 whitespace-nowrap">
-                            {{ $response->creation_minutes !== null ? $response->creation_minutes.' 分' : '—' }}
+                            @if ($response->totalMinutes() === null)
+                                —
+                            @else
+                                {{ $response->totalMinutes() }} 分
+                                <span class="block text-xs text-slate-500">鑑 {{ $response->creation_minutes ?? '—' }}／明細 {{ $response->detail_creation_minutes ?? '—' }}</span>
+                            @endif
                         </td>
                         <td class="px-3 py-2 whitespace-nowrap text-slate-600">{{ $response->created_at?->format('Y/m/d H:i') ?? '—' }}</td>
                         <td class="px-3 py-2 whitespace-nowrap text-slate-600">{{ $response->updated_at?->format('Y/m/d H:i') ?? '—' }}</td>

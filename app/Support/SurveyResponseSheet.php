@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\LazyCollection;
 
 /**
- * The answers laid out in the column order of the original Excel 回答シート, shared by
- * the CSV and Excel downloads so both always carry the same columns.
+ * The answers laid out one column per question in form order, shared by the CSV and
+ * Excel downloads so both always carry the same columns.
  */
 class SurveyResponseSheet
 {
@@ -21,7 +21,7 @@ class SurveyResponseSheet
     {
         return array_merge(
             ['No.', '顧客コード', '顧客名', '作成区分', '営業所・拠点', '請求書の作成担当者'],
-            array_column(SurveyResponse::FIELDS, 'label'),
+            array_map(SurveyResponse::columnLabel(...), array_keys(SurveyResponse::FIELDS)),
             ['登録日時', '更新日時'],
         );
     }
@@ -52,6 +52,7 @@ class SurveyResponseSheet
                 foreach (SurveyResponse::FIELDS as $field => $definition) {
                     $row[] = match ($definition['type']) {
                         'choice' => $this->catalog->label($response->{$field}) ?? '',
+                        'choices' => collect($response->{$field})->map(fn (int $id) => $this->catalog->label($id))->implode('、'),
                         'number' => $response->{$field} ?? '',
                         default => (string) ($response->{$field} ?? ''),
                     };

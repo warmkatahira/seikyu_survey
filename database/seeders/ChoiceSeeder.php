@@ -20,12 +20,15 @@ class ChoiceSeeder extends Seeder
      * @var array<string, array{name: string, description?: string, options: array<string, string>}>
      */
     private const CATEGORIES = [
-        'presence' => [
-            'name' => '有無',
-            'description' => '請求項目の構成（保管料・荷役料・運賃・作業/その他）で使用します。',
+        'billing_item' => [
+            'name' => '請求項目',
+            'description' => '「鑑に載せている項目」と「作成している明細」で使用します（複数選択）。',
             'options' => [
-                'yes' => 'あり',
-                'no' => 'なし',
+                'storage' => '保管',
+                'handling' => '荷役',
+                'freight' => '運賃',
+                'work' => '作業',
+                'other' => 'その他',
             ],
         ],
         'closing_day' => [
@@ -37,14 +40,6 @@ class ChoiceSeeder extends Seeder
                 'day_15' => '15日',
                 'day_10' => '10日',
                 'other' => 'その他',
-            ],
-        ],
-        'detail_presence' => [
-            'name' => '別紙明細の有無',
-            'options' => [
-                'all' => '全ての項目に添付',
-                'partial' => '一部の項目のみ添付',
-                'none' => '添付なし（鏡のみ）',
             ],
         ],
         'detail_format' => [
@@ -62,7 +57,7 @@ class ChoiceSeeder extends Seeder
         ],
         'data_source' => [
             'name' => '実績データの出どころ',
-            'description' => '請求金額（数量）の根拠となるデータの入手元。主・副の両方で使用します。',
+            'description' => '請求金額（数量）の根拠となるデータの入手元。鑑・明細それぞれの主・副で使用します。',
             'options' => [
                 'wms' => '出荷システム（WMS）',
                 'smooth' => '顧客管理システム（smooth）',

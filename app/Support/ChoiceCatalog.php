@@ -34,15 +34,18 @@ class ChoiceCatalog
     }
 
     /**
-     * Active options plus the one currently selected, so an answer that points at a
+     * Active options plus those currently selected, so an answer that points at a
      * deactivated option keeps showing it instead of silently resetting to blank.
      *
+     * @param  int|list<int>|null  $selected  one id, or several for a multi-select
      * @return Collection<int, ChoiceOption>
      */
-    public function optionsIncluding(string $categoryKey, ?int $selectedId): Collection
+    public function optionsIncluding(string $categoryKey, int|array|null $selected): Collection
     {
+        $selectedIds = array_map(intval(...), (array) $selected);
+
         return $this->grouped()->get($categoryKey, new Collection)
-            ->filter(fn (ChoiceOption $option): bool => $option->is_active || $option->id === $selectedId)
+            ->filter(fn (ChoiceOption $option): bool => $option->is_active || in_array($option->id, $selectedIds, true))
             ->values();
     }
 

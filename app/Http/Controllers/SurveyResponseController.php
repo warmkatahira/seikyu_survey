@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -79,7 +80,12 @@ class SurveyResponseController extends Controller
 
     public function store(SurveyResponseRequest $request): RedirectResponse|JsonResponse
     {
-        $response = SurveyResponse::create($request->validated());
+        $response = DB::transaction(function () use ($request): SurveyResponse {
+            $response = SurveyResponse::create($request->safe()->except(array_keys(SurveyResponse::multiChoiceFields())));
+            $response->syncChoices($request->validated());
+
+            return $response;
+        });
 
         $request->session()->put(self::LAST_EMPLOYEE_KEY, $response->employee_id);
 
@@ -95,7 +101,7 @@ class SurveyResponseController extends Controller
         $previous = url()->previous();
 
         return view('responses.show', [
-            'response' => $response->load(['employee', 'customer', 'office']),
+            'response' => $response->load(['employee', 'customer', 'office', 'billingItems']),
             'catalog' => $this->catalog,
             // Back to the list as it was left (filters and page), when that is where we came from.
             'backUrl' => parse_url($previous, PHP_URL_PATH) === '/responses' ? $previous : route('responses.index'),
@@ -109,7 +115,10 @@ class SurveyResponseController extends Controller
 
     public function update(SurveyResponseRequest $request, SurveyResponse $response): RedirectResponse|JsonResponse
     {
-        $response->update($request->validated());
+        DB::transaction(function () use ($request, $response): void {
+            $response->update($request->safe()->except(array_keys(SurveyResponse::multiChoiceFields())));
+            $response->syncChoices($request->validated());
+        });
 
         return $this->saved($request, route('responses.index'), "「{$response->customerLabel()}」の回答を更新しました。");
     }
@@ -161,7 +170,8 @@ class SurveyResponseController extends Controller
         return [
             'response' => $response,
             'employeesByOffice' => $this->employeesByOffice(),
-            'customers' => Customer::query()->active()->ordered()->get(),
+            // How many answers each customer already has, so respondents can spot the ones still unanswered.
+            'customers' => Customer::query()->active()->ordered()->withCount('surveyResponses')->get(),
             'offices' => Office::query()->active()->ordered()->get(),
             'catalog' => $this->catalog,
         ];
@@ -197,10 +207,8 @@ class SurveyResponseController extends Controller
 
         return [
             'answered' => SurveyResponse::query()->count(),
-            'minutes' => (int) SurveyResponse::query()->sum('creation_minutes'),
-            'sole_owner' => $soleOwnerId === null
-                ? 0
-                : SurveyResponse::query()->where('dependency_option_id', $soleOwnerId)->count(),
+            'minutes' => (int) SurveyResponse::query()->selectRaw(SurveyResponse::minutesSumSql().' as minutes')->value('minutes'),
+            'sole_owner' => $soleOwnerId === null ? 0 : SurveyResponse::query()->soleOwner($soleOwnerId)->count(),
         ];
     }
 }

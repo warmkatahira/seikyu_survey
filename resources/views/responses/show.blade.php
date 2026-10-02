@@ -1,5 +1,6 @@
 @php
     $sections = App\Models\SurveyResponse::SECTIONS;
+    $groups = App\Models\SurveyResponse::GROUPS;
     $fieldsBySection = App\Models\SurveyResponse::fieldsBySection();
 @endphp
 
@@ -29,7 +30,7 @@
                     </div>
                 @endforeach
 
-                @foreach ($fieldsBySection['basic'] ?? [] as $name => $field)
+                @foreach ($fieldsBySection['basic'][''] ?? [] as $name => $field)
                     @include('responses.partials.answer-value')
                 @endforeach
 
@@ -41,18 +42,22 @@
         </x-section-card>
 
         @foreach ($sections as $sectionKey => $sectionLabel)
-            @continue($sectionKey === 'basic')
-            @php
-                $fields = $fieldsBySection[$sectionKey] ?? [];
-            @endphp
-            @continue($fields === [])
+            @continue($sectionKey === 'basic' || empty($fieldsBySection[$sectionKey]))
 
-            <x-section-card :title="$sectionLabel">
-                <dl class="grid gap-x-6 gap-y-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
-                    @foreach ($fields as $name => $field)
-                        @include('responses.partials.answer-value')
-                    @endforeach
-                </dl>
+            <x-section-card :title="$sectionLabel" class="space-y-6">
+                @foreach ($fieldsBySection[$sectionKey] as $groupKey => $fields)
+                    <div>
+                        @if ($groupKey !== '')
+                            <h3 class="mb-3 border-l-4 border-emerald-500 pl-2 text-sm font-semibold text-slate-700">{{ $groups[$groupKey] }}</h3>
+                        @endif
+
+                        <dl class="grid gap-x-6 gap-y-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
+                            @foreach ($fields as $name => $field)
+                                @include('responses.partials.answer-value')
+                            @endforeach
+                        </dl>
+                    </div>
+                @endforeach
             </x-section-card>
         @endforeach
     </div>

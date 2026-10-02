@@ -11,8 +11,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class SurveyResponseExportController extends Controller
 {
     /**
-     * Exports every answer in the column order of the original Excel 回答シート,
-     * so the result can be dropped straight into the existing sheet for review.
+     * Exports every answer, one column per question in the order of the answer form.
      */
     public function __invoke(SurveyResponseSheet $sheet): StreamedResponse
     {
