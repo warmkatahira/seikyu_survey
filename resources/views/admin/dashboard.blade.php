@@ -50,25 +50,27 @@
             </div>
         </x-section-card>
 
-        @foreach ($breakdowns as $breakdownTitle => $breakdown)
+        @foreach ($breakdowns as $breakdownTitle => [$countHeadings, $breakdown])
             <x-section-card :title="$breakdownTitle">
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="text-left text-xs text-slate-600">
                         <tr>
                             <th class="py-2 font-medium"></th>
-                            <th class="py-2 text-right font-medium">鑑</th>
-                            <th class="py-2 text-right font-medium">明細</th>
+                            @foreach ($countHeadings as $countHeading)
+                                <th class="py-2 text-right font-medium">{{ $countHeading }}</th>
+                            @endforeach
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse ($breakdown as $row)
                             <tr>
                                 <td class="py-2">{{ $row->label }}</td>
-                                <td class="py-2 ps-3 text-right whitespace-nowrap">{{ number_format($row->cover) }} 件</td>
-                                <td class="py-2 ps-3 text-right whitespace-nowrap">{{ number_format($row->detail) }} 件</td>
+                                @foreach ($row->counts as $count)
+                                    <td class="py-2 ps-3 text-right whitespace-nowrap">{{ number_format($count) }} 件</td>
+                                @endforeach
                             </tr>
                         @empty
-                            <tr><td colspan="3" class="py-6 text-center text-slate-500">まだ回答がありません。</td></tr>
+                            <tr><td colspan="{{ count($countHeadings) + 1 }}" class="py-6 text-center text-slate-500">まだ回答がありません。</td></tr>
                         @endforelse
                     </tbody>
                 </table>

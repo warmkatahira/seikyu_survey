@@ -1,7 +1,7 @@
 {{-- One answer as a <dt>/<dd> pair, formatted by its type in SurveyResponse::FIELDS. --}}
 @php
     $value = match ($field['type']) {
-        'choice' => $catalog->label($response->{$name}),
+        'choice' => $response->choiceLabel($name),
         'choices' => $response->{$name} !== [] ? implode('、', $response->selectedChoiceLabels($name)) : null,
         'number' => $response->{$name} !== null ? $response->{$name}.' 分' : null,
         default => filled($response->{$name}) ? $response->{$name} : null,

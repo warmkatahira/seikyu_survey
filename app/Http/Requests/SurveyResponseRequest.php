@@ -19,22 +19,101 @@ class SurveyResponseRequest extends FormRequest
             'customer_id' => ['required', Rule::exists('customers', 'id')],
             'billing_category' => ['nullable', 'string', 'max:50'],
             'office_id' => ['required', Rule::exists('offices', 'id')],
-            'creation_minutes' => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'detail_creation_minutes' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
 
+        foreach (SurveyResponse::FIELDS as $field => $definition) {
+            if ($definition['type'] === 'number') {
+                $rules[$field] = [...$this->presence($field, $catalog), 'integer', 'min:0', 'max:9999'];
+            }
+        }
+
         foreach (SurveyResponse::choiceFields() as $field => $definition) {
-            $rules[$field] = ['nullable', Rule::in($catalog->optionIds($definition['category']))];
+            $rules[$field] = [...$this->presence($field, $catalog), Rule::in($catalog->optionIds($definition['category']))];
         }
 
         foreach (SurveyResponse::multiChoiceFields() as $field => $definition) {
-            $rules[$field] = ['nullable', 'array'];
+            $rules[$field] = [...$this->presence($field, $catalog), 'array'];
             $rules["{$field}.*"] = ['distinct', Rule::in($catalog->optionIds($definition['category']))];
-            $rules[SurveyResponse::otherInputName($field)] = ['nullable', 'string', 'max:100'];
+        }
+
+        foreach ($this->otherFields() as $field => $definition) {
+            $rules[SurveyResponse::otherInputName($field)] = [
+                Rule::requiredIf(fn (): bool => $this->choseOther($field, $definition, $catalog)),
+                'nullable',
+                'string',
+                'max:100',
+            ];
         }
 
         return $rules;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return collect($this->otherFields())->keys()
+            ->mapWithKeys(fn (string $field): array => [
+                SurveyResponse::otherInputName($field).'.required' => '「その他」を選んだ場合は、その内容を入力してください。',
+            ])
+            ->all();
+    }
+
+    /**
+     * Every field with a その他 text input: the multi-selects and the dropdowns marked `other`.
+     *
+     * @return array<string, array{section: string, label: string, type: string, category: string, hint?: string}>
+     */
+    private function otherFields(): array
+    {
+        return SurveyResponse::multiChoiceFields() + SurveyResponse::choiceFieldsWithOther();
+    }
+
+    /**
+     * The presence rules of a question: `required` for a required one (a 明細 one only while
+     * 明細について is asked), and `nullable` for one that may be left blank.
+     *
+     * @return list<mixed>
+     */
+    private function presence(string $field, ChoiceCatalog $catalog): array
+    {
+        if (! SurveyResponse::isRequired($field)) {
+            return ['nullable'];
+        }
+
+        return SurveyResponse::FIELDS[$field]['section'] === 'detail'
+            ? [Rule::requiredIf(fn (): bool => ! $this->isCoverOnly($catalog)), 'nullable']
+            : ['required'];
+    }
+
+    /**
+     * Whether 請求書の構成 was answered 鑑のみ, so 明細について is not asked.
+     */
+    private function isCoverOnly(ChoiceCatalog $catalog): bool
+    {
+        $coverOnlyId = $catalog->optionIdByValue('invoice_composition', SurveyResponse::COVER_ONLY);
+
+        return $coverOnlyId !== null && (int) $this->input('invoice_composition_option_id') === $coverOnlyId;
+    }
+
+    /**
+     * Whether その他 was chosen in a field, so what it is must be said. A 明細 question does not
+     * count while 請求書の構成 is 鑑のみ, as its answers are thrown away on save.
+     *
+     * @param  array{section: string, type: string, category: string}  $definition
+     */
+    private function choseOther(string $field, array $definition, ChoiceCatalog $catalog): bool
+    {
+        if ($definition['section'] === 'detail' && $this->isCoverOnly($catalog)) {
+            return false;
+        }
+
+        $otherId = $catalog->optionIdByValue($definition['category'], 'other');
+        $chosen = array_map(intval(...), (array) $this->input($field, []));
+
+        return $otherId !== null && in_array($otherId, $chosen, true);
     }
 
     /**
@@ -53,7 +132,7 @@ class SurveyResponseRequest extends FormRequest
             $attributes[$field] = $attributes["{$field}.*"] = SurveyResponse::columnLabel($field);
         }
 
-        foreach (array_keys(SurveyResponse::multiChoiceFields()) as $field) {
+        foreach (array_keys($this->otherFields()) as $field) {
             $attributes[SurveyResponse::otherInputName($field)] = SurveyResponse::columnLabel($field).'（その他の内容）';
         }
 

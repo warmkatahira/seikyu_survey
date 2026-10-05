@@ -15,6 +15,9 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    /** @var list<string> */
+    private const COVER_AND_DETAIL = ['鑑', '明細'];
+
     public function __invoke(ChoiceCatalog $catalog): View
     {
         $soleOwnerId = $catalog->optionIdByValue('dependency', 'none_only_me');
@@ -28,11 +31,13 @@ class DashboardController extends Controller
             'officeCount' => Office::query()->active()->count(),
             'answeredCustomerCount' => SurveyResponse::query()->distinct()->count('customer_id'),
             'byEmployee' => $this->countsByEmployee(),
+            // Each breakdown: its count columns' headings, and a row per option with one count per column.
             'breakdowns' => [
-                '請求項目（鑑に載せている項目／作成している明細）' => $this->tickedCounts('cover_item_ids', 'detail_item_ids', $catalog),
-                '実績データの出どころ（複数選択）' => $this->tickedCounts('data_source_option_ids', 'detail_data_source_option_ids', $catalog),
-                '自分以外に作成できる人' => $this->coverAndDetailCounts('dependency_option_id', $catalog),
-                '実績の記録タイミング' => $this->coverAndDetailCounts('record_timing_option_id', $catalog),
+                '作成している明細（複数選択）' => [['件数'], $this->tickedCounts(['detail_item_ids'], $catalog)],
+                '現状使用しているツール（複数選択）' => [['件数'], $this->tickedCounts(['tool_option_ids'], $catalog)],
+                '実績データの出どころ（複数選択）' => [self::COVER_AND_DETAIL, $this->tickedCounts(['data_source_option_ids', 'detail_data_source_option_ids'], $catalog)],
+                '自分以外に作成できる人' => [['件数'], $this->singleCounts('dependency_option_id', $catalog)],
+                '実績の記録タイミング（明細）' => [['件数'], $this->singleCounts('detail_record_timing_option_id', $catalog)],
             ],
         ]);
     }
@@ -56,26 +61,34 @@ class DashboardController extends Controller
     }
 
     /**
-     * One question asked of both 鑑 and 明細, counted side by side: a row per option chosen in
-     * either, in the dropdown's order, with (未回答) last.
+     * One question asked once per answer.
      *
-     * @return Collection<int, object{label: string, cover: int, detail: int}>
+     * @return Collection<int, object{label: string, counts: list<int>}>
      */
-    private function coverAndDetailCounts(string $coverColumn, ChoiceCatalog $catalog): Collection
+    private function singleCounts(string $column, ChoiceCatalog $catalog): Collection
     {
-        $cover = $this->countsByOption($coverColumn);
-        $detail = $this->countsByOption("detail_{$coverColumn}");
-        $order = array_flip($catalog->optionIds(SurveyResponse::FIELDS[$coverColumn]['category']));
+        return $this->optionRows($column, [$this->countsByOption($column)], $catalog);
+    }
 
-        return collect($cover->keys())
-            ->merge($detail->keys())
+    /**
+     * A row per option chosen in any of the counted columns, in the dropdown's order, with
+     * (未回答) last.
+     *
+     * @param  list<Collection<string, int>>  $columns  counts by option id, one per count column
+     * @return Collection<int, object{label: string, counts: list<int>}>
+     */
+    private function optionRows(string $field, array $columns, ChoiceCatalog $catalog): Collection
+    {
+        $order = array_flip($catalog->optionIds(SurveyResponse::FIELDS[$field]['category']));
+
+        return collect($columns)
+            ->flatMap(fn (Collection $counts): array => $counts->keys()->all())
             ->unique()
             ->sortBy(fn (string $optionId): int => $optionId === '' ? PHP_INT_MAX : ($order[(int) $optionId] ?? PHP_INT_MAX - 1))
             ->values()
             ->map(fn (string $optionId): object => (object) [
                 'label' => $optionId === '' ? '(未回答)' : ($catalog->label((int) $optionId) ?? '(不明)'),
-                'cover' => $cover->get($optionId, 0),
-                'detail' => $detail->get($optionId, 0),
+                'counts' => array_map(fn (Collection $counts): int => $counts->get($optionId, 0), $columns),
             ]);
     }
 
@@ -94,27 +107,28 @@ class DashboardController extends Controller
     }
 
     /**
-     * One multi-select asked of both 鑑 and 明細: how many answers ticked each option in either,
-     * every option listed even when nobody ticked it.
+     * How many answers ticked each option of one or more multi-selects asked the same question
+     * (the 鑑 one and the 明細 one), one count per field, every option listed even when nobody
+     * ticked it.
      *
-     * @return Collection<int, object{label: string, cover: int, detail: int}>
+     * @param  list<string>  $fields
+     * @return Collection<int, object{label: string, counts: list<int>}>
      */
-    private function tickedCounts(string $coverField, string $detailField, ChoiceCatalog $catalog): Collection
+    private function tickedCounts(array $fields, ChoiceCatalog $catalog): Collection
     {
         $counts = DB::table('survey_response_choices')
             ->selectRaw('field, choice_option_id, COUNT(*) as total')
-            ->whereIn('field', [$coverField, $detailField])
+            ->whereIn('field', $fields)
             ->groupBy('field', 'choice_option_id')
             ->get();
         $count = fn (string $field, int $optionId): int => (int) $counts
             ->first(fn (object $row): bool => $row->field === $field && (int) $row->choice_option_id === $optionId)
             ?->total;
 
-        return $catalog->optionsIncluding(SurveyResponse::FIELDS[$coverField]['category'], $counts->pluck('choice_option_id')->all())
+        return $catalog->optionsIncluding(SurveyResponse::FIELDS[$fields[0]]['category'], $counts->pluck('choice_option_id')->all())
             ->map(fn (ChoiceOption $option): object => (object) [
                 'label' => $option->label,
-                'cover' => $count($coverField, $option->id),
-                'detail' => $count($detailField, $option->id),
+                'counts' => array_map(fn (string $field): int => $count($field, $option->id), $fields),
             ]);
     }
 }

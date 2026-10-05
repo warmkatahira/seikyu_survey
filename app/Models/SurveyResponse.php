@@ -20,19 +20,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'billing_category',
     'office_id',
     'invoice_composition_option_id',
-    'record_timing_option_id',
-    'price_basis_option_id',
-    'copy_previous_month_option_id',
+    'customer_check_option_id',
     'creation_minutes',
-    'irregular_frequency_option_id',
     'dependency_option_id',
-    'detail_format_option_id',
+    'detail_mailing_option_id',
+    'detail_record_timing_other',
     'detail_record_timing_option_id',
-    'detail_price_basis_option_id',
-    'detail_copy_previous_month_option_id',
     'detail_creation_minutes',
-    'detail_irregular_frequency_option_id',
-    'detail_dependency_option_id',
     'digitization_request_option_id',
     'notes',
 ])]
@@ -50,6 +44,7 @@ class SurveyResponse extends Model
         'basic' => '基本情報',
         'cover' => '鑑について',
         'detail' => '明細について',
+        'tools' => 'ツールの使用について',
         'customer_request' => '顧客からの要望',
         'free_text' => '自由記述',
     ];
@@ -66,14 +61,13 @@ class SurveyResponse extends Model
     ];
 
     /**
-     * Sub-headings inside a section. 鑑について and 明細について ask the same three groups.
+     * Sub-headings inside a section. 鑑について and 明細について ask the same groups.
      *
      * @var array<string, string>
      */
     public const GROUPS = [
         'data_source' => '実績データの取得方法',
-        'pricing' => '単価・作成方法',
-        'workload' => '工数・属人度',
+        'workload' => '工数',
     ];
 
     /**
@@ -90,14 +84,6 @@ class SurveyResponse extends Model
     public const MINUTES_COLUMNS = ['creation_minutes', 'detail_creation_minutes'];
 
     /**
-     * The 鑑 and 明細 自分以外に作成できる人 columns; an answer counts towards
-     * 「自分しか作れない」 when either of them says so.
-     *
-     * @var list<string>
-     */
-    public const DEPENDENCY_COLUMNS = ['dependency_option_id', 'detail_dependency_option_id'];
-
-    /**
      * Every answered column, in form order.
      *
      * The form, the validation rules and the exports all read from this one definition.
@@ -107,7 +93,12 @@ class SurveyResponse extends Model
      * saved through syncChoices(); ticking its その他 option (value `other`) asks what it is
      * in a text input named after the field with an `_other` suffix (see otherInputName()).
      *
-     * @var array<string, array{section: string, group?: string, label: string, type: string, category?: string, hint?: string}>
+     * `hint` explains the question; `note` (optional) calls out an exception or an easy-to-miss
+     * case, shown apart from the hint. Every question must be answered (a multi-select with at
+     * least one tick) unless marked `optional`; a 明細 question only while it is asked, i.e.
+     * unless 請求書の構成 is 鑑のみ. See isRequired().
+     *
+     * @var array<string, array{section: string, group?: string, label: string, type: string, category?: string, hint?: string, note?: string, optional?: bool}>
      */
     public const FIELDS = [
         'invoice_composition_option_id' => [
@@ -115,17 +106,25 @@ class SurveyResponse extends Model
             'label' => '請求書の構成',
             'type' => 'choice',
             'category' => 'invoice_composition',
-            'hint' => '請求書が鑑だけなのか、鑑に明細を添付しているのかをお答えください。「鑑のみ」の場合、「明細について」は回答不要です。',
+            'hint' => '請求書が鑑だけなのか、鑑に明細を添付しているのかをお答えください。',
+            'note' => '「鑑のみ」の場合、「明細について」は回答不要です。',
+        ],
+        'customer_check_option_id' => [
+            'section' => 'basic',
+            'label' => '送付前のお客様確認',
+            'type' => 'choice',
+            'category' => 'yes_no',
+            'hint' => '請求書を送付する前に、金額や内容をお客様に確認してもらっているかをお答えください。',
+        ],
+        'dependency_option_id' => [
+            'section' => 'basic',
+            'label' => '自分以外に作成できる人',
+            'type' => 'choice',
+            'category' => 'dependency',
+            'hint' => 'ご自身が不在のとき、この請求書（鑑・明細）を作成できる人がいるかどうかです。',
         ],
 
         // 鑑について
-        'cover_item_ids' => [
-            'section' => 'cover',
-            'label' => '鑑に載せている項目',
-            'type' => 'choices',
-            'category' => 'billing_item',
-            'hint' => '請求書の鑑に載せている項目を、すべてチェックしてください。',
-        ],
         'data_source_option_ids' => [
             'section' => 'cover',
             'group' => 'data_source',
@@ -134,49 +133,13 @@ class SurveyResponse extends Model
             'category' => 'data_source',
             'hint' => '鑑の数量の根拠となるデータを、どこから持ってきているかをお答えください。使っているものをすべてチェックしてください。',
         ],
-        'record_timing_option_id' => [
-            'section' => 'cover',
-            'group' => 'data_source',
-            'label' => '実績入力タイミング',
-            'type' => 'choice',
-            'category' => 'record_timing',
-            'hint' => '入出庫や作業の実績を、日々その都度記録しているのか、月末にまとめて入力しているのかをお答えください。',
-        ],
-        'price_basis_option_id' => [
-            'section' => 'cover',
-            'group' => 'pricing',
-            'label' => '単価の根拠',
-            'type' => 'choice',
-            'category' => 'price_basis',
-        ],
-        'copy_previous_month_option_id' => [
-            'section' => 'cover',
-            'group' => 'pricing',
-            'label' => '前月ファイルのコピーで作成',
-            'type' => 'choice',
-            'category' => 'yes_no',
-        ],
         'creation_minutes' => [
             'section' => 'cover',
             'group' => 'workload',
             'label' => '作成時間（分）',
             'type' => 'number',
-            'hint' => '鑑の作成にかかるおおよその時間を「分」でご記入ください。明細の作成時間は「明細について」に分けてご記入ください。正確でなくて構いません。',
-        ],
-        'irregular_frequency_option_id' => [
-            'section' => 'cover',
-            'group' => 'workload',
-            'label' => 'イレギュラー作業の発生頻度',
-            'type' => 'choice',
-            'category' => 'irregular_frequency',
-        ],
-        'dependency_option_id' => [
-            'section' => 'cover',
-            'group' => 'workload',
-            'label' => '自分以外に作成できる人',
-            'type' => 'choice',
-            'category' => 'dependency',
-            'hint' => 'ご自身が不在のとき、同じ鑑を作成できる人がいるかどうかです。',
+            'hint' => '鑑の作成にかかるおおよその時間を「分」でご記入ください。正確でなくて構いません。',
+            'note' => '明細の作成時間は「明細について」に分けてご記入ください。',
         ],
 
         // 明細について
@@ -185,13 +148,23 @@ class SurveyResponse extends Model
             'label' => '作成している明細',
             'type' => 'choices',
             'category' => 'billing_item',
-            'hint' => '請求書に添付するために作成している明細を、すべてチェックしてください。',
+            'hint' => '作成している明細を、すべてチェックしてください。',
+            'note' => '入出庫をまとめて「荷役」として明細を作成している場合は、入庫・出庫の両方にチェックしてください。',
         ],
-        'detail_format_option_id' => [
+        'detail_format_option_ids' => [
             'section' => 'detail',
             'label' => '明細の形式',
-            'type' => 'choice',
+            'type' => 'choices',
             'category' => 'detail_format',
+            'hint' => '作成している明細の形式を、すべてチェックしてください。',
+            'note' => '明細によって形式が違う場合は、使っている形式をすべてチェックしてください。',
+        ],
+        'detail_mailing_option_id' => [
+            'section' => 'detail',
+            'label' => '明細の郵送',
+            'type' => 'choice',
+            'category' => 'detail_mailing',
+            'hint' => '明細を紙に印刷して、お客様に郵送しているかをお答えください。',
         ],
         'detail_data_source_option_ids' => [
             'section' => 'detail',
@@ -207,58 +180,48 @@ class SurveyResponse extends Model
             'label' => '実績の記録タイミング',
             'type' => 'choice',
             'category' => 'record_timing',
-        ],
-        'detail_price_basis_option_id' => [
-            'section' => 'detail',
-            'group' => 'pricing',
-            'label' => '単価の根拠',
-            'type' => 'choice',
-            'category' => 'price_basis',
-        ],
-        'detail_copy_previous_month_option_id' => [
-            'section' => 'detail',
-            'group' => 'pricing',
-            'label' => '前月ファイルのコピーで作成',
-            'type' => 'choice',
-            'category' => 'yes_no',
+            'other' => true,
         ],
         'detail_creation_minutes' => [
             'section' => 'detail',
             'group' => 'workload',
             'label' => '作成時間（分）',
             'type' => 'number',
-            'hint' => '明細の集計・作成にかかるおおよその時間を「分」でご記入ください。明細が複数ある場合は合計で構いません。',
+            'hint' => '明細の集計・作成にかかるおおよその時間を「分」でご記入ください。',
+            'note' => '明細が複数ある場合は合計で構いません。',
         ],
-        'detail_irregular_frequency_option_id' => [
-            'section' => 'detail',
-            'group' => 'workload',
-            'label' => 'イレギュラー作業の発生頻度',
-            'type' => 'choice',
-            'category' => 'irregular_frequency',
-        ],
-        'detail_dependency_option_id' => [
-            'section' => 'detail',
-            'group' => 'workload',
-            'label' => '自分以外に作成できる人',
-            'type' => 'choice',
-            'category' => 'dependency',
-            'hint' => 'ご自身が不在のとき、同じ明細を作成できる人がいるかどうかです。',
+
+        'tool_option_ids' => [
+            'section' => 'tools',
+            'label' => '現状使用しているツールについて',
+            'type' => 'choices',
+            'category' => 'tool',
+            'hint' => '請求書の作成に現在使っているツールをすべてチェックしてください。',
         ],
 
         'digitization_request_option_id' => [
             'section' => 'customer_request',
             'label' => '請求書の電子化の要望',
             'type' => 'choice',
-            'category' => 'yes_no',
+            'category' => 'digitization_request',
             'hint' => '弊社から出している請求書を電子化してほしい、という話を顧客から受けたことがあるかどうかです。',
         ],
         'notes' => [
+            'optional' => true,
             'section' => 'free_text',
             'label' => '困っていること・特記事項',
             'type' => 'textarea',
             'hint' => '選択肢に当てはまるものが無かった項目の補足も、こちらにご記入ください。',
         ],
     ];
+
+    /**
+     * Whether a question must be answered (a 明細 one only while 明細について is asked).
+     */
+    public static function isRequired(string $field): bool
+    {
+        return ! (self::FIELDS[$field]['optional'] ?? false);
+    }
 
     /**
      * The subset of FIELDS backed by `choice_options`, keyed by column name.
@@ -281,11 +244,25 @@ class SurveyResponse extends Model
     }
 
     /**
-     * The その他 text input of a multi-select field, e.g. 「cover_item_ids_other」.
+     * The その他 text input of a field asking what その他 means: for a multi-select it is
+     * named after the field, e.g. 「detail_item_ids_other」; for a dropdown marked `other` it is
+     * a column of its own, e.g. 「detail_record_timing_other」.
      */
     public static function otherInputName(string $field): string
     {
-        return "{$field}_other";
+        return self::FIELDS[$field]['type'] === 'choices'
+            ? "{$field}_other"
+            : str_replace('_option_id', '_other', $field);
+    }
+
+    /**
+     * The dropdowns that ask what その他 means in a column of their own, keyed by field name.
+     *
+     * @return array<string, array{section: string, label: string, type: string, category: string, other: true, hint?: string}>
+     */
+    public static function choiceFieldsWithOther(): array
+    {
+        return array_filter(self::choiceFields(), fn (array $field): bool => $field['other'] ?? false);
     }
 
     /**
@@ -360,12 +337,49 @@ class SurveyResponse extends Model
 
             $answers[$field] = $definition['type'] === 'choices' ? [] : null;
 
-            if ($definition['type'] === 'choices') {
+            if ($definition['type'] === 'choices' || ($definition['other'] ?? false)) {
                 $answers[self::otherInputName($field)] = null;
             }
         }
 
         return $answers;
+    }
+
+    /**
+     * The answers with each dropdown's その他 text emptied unless その他 is what was chosen.
+     *
+     * @param  array<string, mixed>  $answers  validated input
+     * @return array<string, mixed>
+     */
+    public static function withoutStrayOtherText(array $answers): array
+    {
+        $catalog = app(ChoiceCatalog::class);
+
+        foreach (array_keys(self::choiceFieldsWithOther()) as $field) {
+            $optionId = $answers[$field] ?? null;
+
+            if ($catalog->value($optionId === null ? null : (int) $optionId) !== 'other') {
+                $answers[self::otherInputName($field)] = null;
+            }
+        }
+
+        return $answers;
+    }
+
+    /**
+     * A dropdown's answer as shown, その他 followed by what it is, e.g. 「その他（PDF）」.
+     */
+    public function choiceLabel(string $field): ?string
+    {
+        $label = app(ChoiceCatalog::class)->label($this->{$field});
+
+        if ($label === null || ! (self::FIELDS[$field]['other'] ?? false)) {
+            return $label;
+        }
+
+        $otherText = $this->{self::otherInputName($field)};
+
+        return filled($otherText) ? "{$label}（{$otherText}）" : $label;
     }
 
     /**
@@ -489,9 +503,17 @@ class SurveyResponse extends Model
     /**
      * @return Attribute<list<int>, never>
      */
-    protected function coverItemIds(): Attribute
+    protected function toolOptionIds(): Attribute
     {
-        return Attribute::get(fn (): array => $this->selectedChoiceIds('cover_item_ids'));
+        return Attribute::get(fn (): array => $this->selectedChoiceIds('tool_option_ids'));
+    }
+
+    /**
+     * @return Attribute<list<int>, never>
+     */
+    protected function detailFormatOptionIds(): Attribute
+    {
+        return Attribute::get(fn (): array => $this->selectedChoiceIds('detail_format_option_ids'));
     }
 
     /**
@@ -529,16 +551,12 @@ class SurveyResponse extends Model
     }
 
     /**
-     * Answers where either 鑑 or 明細 can be made by nobody but the respondent.
+     * Answers whose invoice can be made by nobody but the respondent.
      */
     #[Scope]
     protected function soleOwner(Builder $query, int $noneOnlyMeOptionId): Builder
     {
-        return $query->where(function (Builder $query) use ($noneOnlyMeOptionId) {
-            foreach (self::DEPENDENCY_COLUMNS as $column) {
-                $query->orWhere($column, $noneOnlyMeOptionId);
-            }
-        });
+        return $query->where('dependency_option_id', $noneOnlyMeOptionId);
     }
 
     #[Scope]

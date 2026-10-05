@@ -15,26 +15,29 @@
         @method('PUT')
     @endif
 
+    {{-- One question per row, so a question with a hint box never pushes its neighbour's input out of line. --}}
     <x-section-card :title="$sections['basic']">
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-5">
             <x-field name="employee_id" label="請求書の作成担当者（回答者）" required>
-                <x-select name="employee_id" :selected="$response->employee_id" placeholder="氏名を入力して検索"
-                    data-searchable data-employee-select>
-                    @foreach ($employeesByOffice as $officeName => $employees)
-                        <optgroup label="{{ $officeName }}">
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}" data-office-id="{{ $employee->office_id }}"
-                                    @selected((int) old('employee_id', $response->employee_id) === $employee->id)>
-                                    {{ $employee->name }}
-                                </option>
-                            @endforeach
-                        </optgroup>
-                    @endforeach
-                </x-select>
+                <div class="sm:max-w-md">
+                    <x-select name="employee_id" :selected="$response->employee_id" placeholder="氏名を入力して検索"
+                        data-searchable data-employee-select>
+                        @foreach ($employeesByOffice as $officeName => $employees)
+                            <optgroup label="{{ $officeName }}">
+                                @foreach ($employees as $employee)
+                                    <option value="{{ $employee->id }}" data-office-id="{{ $employee->office_id }}"
+                                        @selected((int) old('employee_id', $response->employee_id) === $employee->id)>
+                                        {{ $employee->name }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
+                    </x-select>
+                </div>
             </x-field>
 
             <x-field name="office_id" label="営業所・拠点" required>
-                <x-select name="office_id" :selected="$response->office_id" placeholder="選択してください" data-office-select
+                <x-select name="office_id" :selected="$response->office_id" placeholder="選択してください" data-office-select class="sm:max-w-md"
                     :data-office-picked="$response->exists || old('office_id') ? 'true' : null">
                     @foreach ($offices as $office)
                         <option value="{{ $office->id }}" @selected((int) old('office_id', $response->office_id) === $office->id)>
@@ -45,16 +48,19 @@
             </x-field>
 
             <x-field name="customer_id" label="顧客名" required
-                hint="1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録し、「作成区分」で区別してください。顧客名の後ろの（）は、その顧客についてすでに登録されている回答の件数です。">
-                <x-select name="customer_id" :selected="$response->customer_id" placeholder="顧客名を入力して検索"
-                    data-searchable>
-                    @foreach ($customers as $customer)
-                        <option value="{{ $customer->id }}"
-                            @selected((int) old('customer_id', $response->customer_id) === $customer->id)>
-                            {{ $customer->name }}{{ $customer->survey_responses_count > 0 ? "（回答 {$customer->survey_responses_count}件）" : '（未回答）' }}
-                        </option>
-                    @endforeach
-                </x-select>
+                hint="顧客名の後ろの（）は、その顧客についてすでに登録されている回答の件数です。"
+                note="1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録し、「作成区分」で区別してください。">
+                <div class="sm:max-w-md">
+                    <x-select name="customer_id" :selected="$response->customer_id" placeholder="顧客名を入力して検索"
+                        data-searchable>
+                        @foreach ($customers as $customer)
+                            <option value="{{ $customer->id }}"
+                                @selected((int) old('customer_id', $response->customer_id) === $customer->id)>
+                                {{ $customer->name }}{{ $customer->survey_responses_count > 0 ? "（回答 {$customer->survey_responses_count}件）" : '（未回答）' }}
+                            </option>
+                        @endforeach
+                    </x-select>
+                </div>
             </x-field>
 
             <x-field name="billing_category" label="作成区分"
@@ -72,7 +78,7 @@
     @foreach ($sections as $sectionKey => $sectionLabel)
         @continue($sectionKey === 'basic' || empty($fieldsBySection[$sectionKey]))
 
-        <div class="{{ $sectionKey === 'detail' ? 'group-has-[option[data-cover-only]:checked]/form:hidden' : '' }}">
+        <div class="{{ $sectionKey === 'detail' ? 'group-has-[[data-cover-only]:checked]/form:hidden' : '' }}">
             <x-section-card :title="$sectionLabel" class="space-y-6">
                 @foreach ($fieldsBySection[$sectionKey] as $groupKey => $fields)
                     <div>
@@ -80,7 +86,7 @@
                             <h3 class="mb-3 border-l-4 border-emerald-500 pl-2 text-sm font-semibold text-slate-700">{{ $groups[$groupKey] }}</h3>
                         @endif
 
-                        <div class="grid gap-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
+                        <div class="grid gap-5">
                             @foreach ($fields as $name => $field)
                                 @include('responses.partials.answer-field')
                             @endforeach
@@ -90,6 +96,14 @@
             </x-section-card>
         </div>
     @endforeach
+
+    {{-- How many required questions are still unanswered, kept up to date as the form is filled in.
+         Clicking it jumps to the first one. Hidden questions (明細について under 鑑のみ) are not counted. --}}
+    <button type="button" data-required-counter aria-live="polite"
+        class="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-30 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-lg transition motion-reduce:transition-none data-done:border-emerald-200 data-done:bg-emerald-50 data-done:text-emerald-800 not-data-done:border-rose-200 not-data-done:bg-white not-data-done:text-rose-700 not-data-done:hover:bg-rose-50">
+        <span class="grid size-5 place-items-center rounded-full text-xs font-semibold text-white not-data-done:bg-rose-500 data-done:bg-emerald-600" data-required-count></span>
+        <span data-required-text></span>
+    </button>
 
     <div class="flex flex-wrap items-center gap-3">
         {{-- Styled as "send": a filled accent pill with a paper-plane, distinct from the grey utility buttons. --}}
@@ -188,6 +202,67 @@
             } else {
                 form.submit();
             }
+        });
+
+        // 「必須項目 あと◯件」: a required question counts as answered once a tile is chosen, or its
+        // dropdown / text / number has a value. Questions hidden at the moment are skipped.
+        (() => {
+            const counter = document.querySelector('[data-required-counter]');
+
+            if (! counter) {
+                return;
+            }
+
+            const isAnswered = (field) => {
+                const picks = field.querySelectorAll('input[type=radio], input[type=checkbox]');
+
+                if (picks.length > 0) {
+                    return Array.from(picks).some((pick) => pick.checked);
+                }
+
+                const control = field.querySelector('select, input[type=number], input[type=text], textarea');
+
+                return control !== null && control.value.trim() !== '';
+            };
+
+            const unanswered = () => Array.from(document.querySelectorAll('[data-required-field]'))
+                .filter((field) => field.offsetParent !== null && ! isAnswered(field));
+
+            const refresh = () => {
+                const left = unanswered().length;
+
+                counter.toggleAttribute('data-done', left === 0);
+                counter.querySelector('[data-required-count]').textContent = left === 0 ? '✓' : left;
+                counter.querySelector('[data-required-text]').textContent = left === 0
+                    ? '必須項目はすべて回答済み'
+                    : `必須項目 あと${left}件`;
+                counter.title = left === 0 ? '' : 'クリックすると未回答の必須項目へ移動します';
+            };
+
+            counter.addEventListener('click', () => {
+                const field = unanswered()[0];
+
+                if (field) {
+                    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    field.querySelector('input:not([type=hidden]), select, textarea')?.focus({ preventScroll: true });
+                }
+            });
+
+            // After other handlers have run (the office filled in from the respondent, 選択を外す).
+            ['input', 'change', 'click'].forEach((type) => document.addEventListener(type, () => requestAnimationFrame(refresh)));
+            refresh();
+        })();
+
+        // 選択を外す: a one-answer question goes back to 未回答 (the hidden empty input is then sent).
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-choice-clear]');
+
+            if (! button) {
+                return;
+            }
+
+            button.closest('form').querySelectorAll(`input[type=radio][name="${button.dataset.choiceClear}"]`)
+                .forEach((radio) => { radio.checked = false; });
         });
 
         // Coming back with the browser's Back button can restore the page mid-send; reset it.

@@ -30,10 +30,13 @@ class ChoiceSeeder extends Seeder
         ],
         'billing_item' => [
             'name' => '請求項目',
-            'description' => '「鑑に載せている項目」と「作成している明細」で使用します（複数選択）。',
+            'description' => '「作成している明細」で使用します（複数選択）。',
             'options' => [
                 'storage' => '保管',
-                'handling' => '荷役',
+                'inbound' => '入庫',
+                'outbound' => '出庫',
+                'packing' => '梱包',
+                'materials' => '資材',
                 'freight' => '運賃',
                 'work' => '作業',
                 'other' => 'その他',
@@ -46,16 +49,25 @@ class ChoiceSeeder extends Seeder
                 'excel_shared' => 'Excel（部署内で共通のフォーマット）',
                 'system_output_raw' => 'システムの出力をそのまま添付',
                 'system_output_edited' => 'システムの出力をExcelで加工',
+                'system_output_tool' => 'システムの出力をツールで加工',
                 'handwritten_scan' => '手書き・紙をスキャン',
                 'customer_format' => '顧客指定の様式（PDF等）',
                 'other' => 'その他',
-                'not_applicable' => '該当なし',
+            ],
+        ],
+        'detail_mailing' => [
+            'name' => '明細の郵送',
+            'options' => [
+                'all' => '全て郵送している',
+                'none' => '全て郵送していない',
+                'partly' => '一部郵送している',
             ],
         ],
         'data_source' => [
             'name' => '実績データの出どころ',
             'description' => '請求金額（数量）の根拠となるデータの入手元。鑑・明細それぞれで使用します（複数選択）。',
             'options' => [
+                'from_detail' => '作成した明細から参照',
                 'wms' => '出荷システム（WMS）',
                 'picking_list' => '出荷時のピッキングリスト',
                 'excel_own' => 'Excelの自作管理表',
@@ -78,16 +90,6 @@ class ChoiceSeeder extends Seeder
                 'other' => 'その他',
             ],
         ],
-        'price_basis' => [
-            'name' => '単価の根拠',
-            'options' => [
-                'contract_accessible' => '契約書・覚書があり、すぐ確認できる',
-                'contract_unknown_location' => '契約書はあるが、どこにあるか分からない',
-                'verbal_only' => '口頭・メールのやりとりのみ',
-                'handover_only' => '前任からの引き継ぎのみ（根拠書類なし）',
-                'unknown' => 'わからない',
-            ],
-        ],
         'yes_no' => [
             'name' => 'はい／いいえ',
             'options' => [
@@ -95,13 +97,22 @@ class ChoiceSeeder extends Seeder
                 'no' => 'いいえ',
             ],
         ],
-        'irregular_frequency' => [
-            'name' => 'イレギュラー作業の発生頻度',
+        'tool' => [
+            'name' => '使用しているツール',
+            'description' => '「現状使用しているツールについて」で使用します（複数選択）。',
             'options' => [
-                'monthly' => 'ほぼ毎月発生する',
-                'few_months' => '数ヵ月に1回程度',
-                'few_times_year' => '年に数回程度',
-                'rarely' => 'ほとんど発生しない',
+                'sagawa_freight' => '運賃算出ツール（佐川急便）',
+                'yamato_freight' => '運賃算出ツール（ヤマト運輸）',
+                'dedicated' => '専用ツール',
+                'other' => 'その他',
+            ],
+        ],
+        'digitization_request' => [
+            'name' => '請求書の電子化の要望',
+            'options' => [
+                'yes' => 'はい',
+                'no' => 'いいえ',
+                'already_digital' => '既に電子化済み',
             ],
         ],
         'dependency' => [
