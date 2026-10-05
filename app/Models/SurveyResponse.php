@@ -106,8 +106,8 @@ class SurveyResponse extends Model
             'label' => '請求書の構成',
             'type' => 'choice',
             'category' => 'invoice_composition',
-            'hint' => '請求書が鑑だけなのか、鑑に明細を添付しているのかをお答えください。',
-            'note' => '「鑑のみ」の場合、「明細について」は回答不要です。',
+            'hint' => '鑑だけを作成しているのか、明細も作成しているのかをお答えください。',
+            'note' => '「鑑のみ」を選ぶと「明細について」は非表示になり、回答も不要です。',
         ],
         'customer_check_option_id' => [
             'section' => 'basic',

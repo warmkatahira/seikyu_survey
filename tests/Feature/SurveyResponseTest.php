@@ -352,8 +352,8 @@ class SurveyResponseTest extends TestCase
         $this->actingAs($this->respondent())
             ->get(route('responses.show', $answer))
             ->assertSeeInOrder([
-                '鑑について', '実績データの出どころ', '出荷システム（WMS）、Excelの自作管理表、運送会社の請求データ・送り状データ',
-                '明細について', '実績データの出どころ', '出荷システム（WMS）、運送会社の請求データ・送り状データ',
+                '鑑について', '実績データの出どころ', '出荷システム（WMS）、Excelの自作管理表、請求データ・請求書',
+                '明細について', '実績データの出どころ', '出荷システム（WMS）、請求データ・請求書',
             ]);
 
         $this->actingAs($this->respondent())
