@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             OfficeSeeder::class,
             EmployeeSeeder::class,
+            CustomerSeeder::class,
             ChoiceSeeder::class,
         ]);
     }

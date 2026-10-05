@@ -20,6 +20,14 @@ class ChoiceSeeder extends Seeder
      * @var array<string, array{name: string, description?: string, options: array<string, string>}>
      */
     private const CATEGORIES = [
+        'invoice_composition' => [
+            'name' => '請求書の構成',
+            'description' => '「鑑のみ」を選ぶと「明細について」は回答不要になります。',
+            'options' => [
+                'cover_only' => '鑑のみ',
+                'cover_and_detail' => '鑑と明細',
+            ],
+        ],
         'billing_item' => [
             'name' => '請求項目',
             'description' => '「鑑に載せている項目」と「作成している明細」で使用します（複数選択）。',
@@ -28,17 +36,6 @@ class ChoiceSeeder extends Seeder
                 'handling' => '荷役',
                 'freight' => '運賃',
                 'work' => '作業',
-                'other' => 'その他',
-            ],
-        ],
-        'closing_day' => [
-            'name' => '締め日',
-            'options' => [
-                'month_end' => '月末',
-                'day_25' => '25日',
-                'day_20' => '20日',
-                'day_15' => '15日',
-                'day_10' => '10日',
                 'other' => 'その他',
             ],
         ],
@@ -57,20 +54,17 @@ class ChoiceSeeder extends Seeder
         ],
         'data_source' => [
             'name' => '実績データの出どころ',
-            'description' => '請求金額（数量）の根拠となるデータの入手元。鑑・明細それぞれの主・副で使用します。',
+            'description' => '請求金額（数量）の根拠となるデータの入手元。鑑・明細それぞれで使用します（複数選択）。',
             'options' => [
                 'wms' => '出荷システム（WMS）',
-                'smooth' => '顧客管理システム（smooth）',
-                'access_tool' => 'ACCESSの自作ツール',
+                'picking_list' => '出荷時のピッキングリスト',
                 'excel_own' => 'Excelの自作管理表',
                 'carrier_invoice' => '運送会社の請求データ・送り状データ',
                 'site_daily_report' => '現場の日報・作業記録',
                 'handwritten_slip' => '手書き伝票・納品書の控え',
                 'customer_contact' => '顧客からのメール・電話連絡',
-                'contract_fixed' => '契約書の固定額（実績の記録は不要）',
                 'no_record' => '特に記録なし（記憶・都度確認）',
                 'other' => 'その他',
-                'not_applicable' => '該当なし',
             ],
         ],
         'record_timing' => [

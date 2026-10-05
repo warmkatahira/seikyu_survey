@@ -31,6 +31,7 @@ class SurveyResponseRequest extends FormRequest
         foreach (SurveyResponse::multiChoiceFields() as $field => $definition) {
             $rules[$field] = ['nullable', 'array'];
             $rules["{$field}.*"] = ['distinct', Rule::in($catalog->optionIds($definition['category']))];
+            $rules[SurveyResponse::otherInputName($field)] = ['nullable', 'string', 'max:100'];
         }
 
         return $rules;
@@ -50,6 +51,10 @@ class SurveyResponseRequest extends FormRequest
 
         foreach (array_keys(SurveyResponse::FIELDS) as $field) {
             $attributes[$field] = $attributes["{$field}.*"] = SurveyResponse::columnLabel($field);
+        }
+
+        foreach (array_keys(SurveyResponse::multiChoiceFields()) as $field) {
+            $attributes[SurveyResponse::otherInputName($field)] = SurveyResponse::columnLabel($field).'（その他の内容）';
         }
 
         return $attributes;

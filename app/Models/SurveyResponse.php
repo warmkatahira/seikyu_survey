@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Support\ChoiceCatalog;
 use Database\Factories\SurveyResponseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,9 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'customer_id',
     'billing_category',
     'office_id',
-    'closing_day_option_id',
-    'data_source_primary_option_id',
-    'data_source_secondary_option_id',
+    'invoice_composition_option_id',
     'record_timing_option_id',
     'price_basis_option_id',
     'copy_previous_month_option_id',
@@ -27,8 +27,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'irregular_frequency_option_id',
     'dependency_option_id',
     'detail_format_option_id',
-    'detail_data_source_primary_option_id',
-    'detail_data_source_secondary_option_id',
     'detail_record_timing_option_id',
     'detail_price_basis_option_id',
     'detail_copy_previous_month_option_id',
@@ -79,6 +77,12 @@ class SurveyResponse extends Model
     ];
 
     /**
+     * The 請求書の構成 option (`invoice_composition` value) meaning there is no 明細, so
+     * 明細について is neither asked nor kept.
+     */
+    public const COVER_ONLY = 'cover_only';
+
+    /**
      * The 鑑 and 明細 作成時間 columns, summed into the 作成時間 totals.
      *
      * @var list<string>
@@ -99,17 +103,19 @@ class SurveyResponse extends Model
      * The form, the validation rules and the exports all read from this one definition.
      * A `category` points at the `choice_categories.key` supplying that column's dropdown;
      * columns without one are free input of the given `type`. `choices` is a multi-select
-     * whose name is not a column but an accessor over the pivot table (see billingItems()),
-     * saved through syncChoices().
+     * whose name is not a column but an accessor over the pivot table (see choices()),
+     * saved through syncChoices(); ticking its その他 option (value `other`) asks what it is
+     * in a text input named after the field with an `_other` suffix (see otherInputName()).
      *
      * @var array<string, array{section: string, group?: string, label: string, type: string, category?: string, hint?: string}>
      */
     public const FIELDS = [
-        'closing_day_option_id' => [
+        'invoice_composition_option_id' => [
             'section' => 'basic',
-            'label' => '締め日',
+            'label' => '請求書の構成',
             'type' => 'choice',
-            'category' => 'closing_day',
+            'category' => 'invoice_composition',
+            'hint' => '請求書が鑑だけなのか、鑑に明細を添付しているのかをお答えください。「鑑のみ」の場合、「明細について」は回答不要です。',
         ],
 
         // 鑑について
@@ -120,29 +126,21 @@ class SurveyResponse extends Model
             'category' => 'billing_item',
             'hint' => '請求書の鑑に載せている項目を、すべてチェックしてください。',
         ],
-        'data_source_primary_option_id' => [
+        'data_source_option_ids' => [
             'section' => 'cover',
             'group' => 'data_source',
-            'label' => '実績データの出どころ（主）',
-            'type' => 'choice',
+            'label' => '実績データの出どころ',
+            'type' => 'choices',
             'category' => 'data_source',
-            'hint' => '鑑の請求金額（数量）の根拠となるデータを、どこから持ってきているかをお答えください。主なものをこちらに選んでください。',
-        ],
-        'data_source_secondary_option_id' => [
-            'section' => 'cover',
-            'group' => 'data_source',
-            'label' => '実績データの出どころ（副）',
-            'type' => 'choice',
-            'category' => 'data_source',
-            'hint' => '主なもの以外にも使っているデータがあれば選んでください。',
+            'hint' => '鑑の数量の根拠となるデータを、どこから持ってきているかをお答えください。使っているものをすべてチェックしてください。',
         ],
         'record_timing_option_id' => [
             'section' => 'cover',
             'group' => 'data_source',
-            'label' => '実績の記録タイミング',
+            'label' => '実績入力タイミング',
             'type' => 'choice',
             'category' => 'record_timing',
-            'hint' => '入出庫や作業の実績を、日々その都度記録しているのか、月末にまとめて書類を見ながら入力しているのかをお答えください。',
+            'hint' => '入出庫や作業の実績を、日々その都度記録しているのか、月末にまとめて入力しているのかをお答えください。',
         ],
         'price_basis_option_id' => [
             'section' => 'cover',
@@ -187,7 +185,7 @@ class SurveyResponse extends Model
             'label' => '作成している明細',
             'type' => 'choices',
             'category' => 'billing_item',
-            'hint' => '請求書に添付するために作成している明細を、すべてチェックしてください。明細を作成していない（鑑のみの）場合は、チェックせずにこのセクションを飛ばしてください。',
+            'hint' => '請求書に添付するために作成している明細を、すべてチェックしてください。',
         ],
         'detail_format_option_id' => [
             'section' => 'detail',
@@ -195,21 +193,13 @@ class SurveyResponse extends Model
             'type' => 'choice',
             'category' => 'detail_format',
         ],
-        'detail_data_source_primary_option_id' => [
+        'detail_data_source_option_ids' => [
             'section' => 'detail',
             'group' => 'data_source',
-            'label' => '実績データの出どころ（主）',
-            'type' => 'choice',
+            'label' => '実績データの出どころ',
+            'type' => 'choices',
             'category' => 'data_source',
-            'hint' => '明細に載せる数量の根拠となるデータを、どこから持ってきているかをお答えください。主なものをこちらに選んでください。',
-        ],
-        'detail_data_source_secondary_option_id' => [
-            'section' => 'detail',
-            'group' => 'data_source',
-            'label' => '実績データの出どころ（副）',
-            'type' => 'choice',
-            'category' => 'data_source',
-            'hint' => '主なもの以外にも使っているデータがあれば選んでください。',
+            'hint' => '明細に載せる数量の根拠となるデータを、どこから持ってきているかをお答えください。使っているものをすべてチェックしてください。',
         ],
         'detail_record_timing_option_id' => [
             'section' => 'detail',
@@ -291,6 +281,27 @@ class SurveyResponse extends Model
     }
 
     /**
+     * The その他 text input of a multi-select field, e.g. 「cover_item_ids_other」.
+     */
+    public static function otherInputName(string $field): string
+    {
+        return "{$field}_other";
+    }
+
+    /**
+     * Every input saved through syncChoices() rather than as a column: the multi-selects and
+     * their その他 text inputs.
+     *
+     * @return list<string>
+     */
+    public static function choiceInputNames(): array
+    {
+        return collect(self::multiChoiceFields())->keys()
+            ->flatMap(fn (string $field): array => [$field, self::otherInputName($field)])
+            ->all();
+    }
+
+    /**
      * FIELDS grouped under their section, then under their sub-heading ('' for fields asked
      * before any sub-heading), for rendering the form and the answer page.
      *
@@ -317,6 +328,44 @@ class SurveyResponse extends Model
         $prefix = self::SECTION_PREFIXES[$field['section']] ?? null;
 
         return $prefix === null ? $field['label'] : "{$prefix}：{$field['label']}";
+    }
+
+    /**
+     * Whether 請求書の構成 is 鑑のみ, so the answer has no 明細について.
+     */
+    public function isCoverOnly(): bool
+    {
+        return app(ChoiceCatalog::class)->value($this->invoice_composition_option_id) === self::COVER_ONLY;
+    }
+
+    /**
+     * The answers with every 明細について question emptied when 請求書の構成 is 鑑のみ, so a
+     * 明細 filled in before switching to 鑑のみ is not kept.
+     *
+     * @param  array<string, mixed>  $answers  validated input
+     * @return array<string, mixed>
+     */
+    public static function withoutDetailIfCoverOnly(array $answers): array
+    {
+        $composition = $answers['invoice_composition_option_id'] ?? null;
+
+        if (app(ChoiceCatalog::class)->value($composition === null ? null : (int) $composition) !== self::COVER_ONLY) {
+            return $answers;
+        }
+
+        foreach (self::FIELDS as $field => $definition) {
+            if ($definition['section'] !== 'detail') {
+                continue;
+            }
+
+            $answers[$field] = $definition['type'] === 'choices' ? [] : null;
+
+            if ($definition['type'] === 'choices') {
+                $answers[self::otherInputName($field)] = null;
+            }
+        }
+
+        return $answers;
     }
 
     /**
@@ -358,14 +407,13 @@ class SurveyResponse extends Model
     }
 
     /**
-     * Ticked 請求項目 (保管・荷役・運賃…) of every multi-select, told apart by the pivot's `part`:
-     * the section of the field they were ticked in (cover = 鑑に載せている項目,
-     * detail = 作成している明細).
+     * Options ticked in every multi-select, told apart by the pivot's `field`: the FIELDS name
+     * of the multi-select they were ticked in. A ticked その他 carries what it is as `other_text`.
      */
-    public function billingItems(): BelongsToMany
+    public function choices(): BelongsToMany
     {
-        return $this->belongsToMany(ChoiceOption::class, 'survey_response_billing_items')
-            ->withPivot('part')
+        return $this->belongsToMany(ChoiceOption::class, 'survey_response_choices')
+            ->withPivot('field', 'other_text')
             ->orderBy('choice_options.sort_order');
     }
 
@@ -376,12 +424,42 @@ class SurveyResponse extends Model
      */
     public function selectedChoiceIds(string $field): array
     {
-        $part = self::FIELDS[$field]['section'];
+        return $this->selectedChoices($field)->modelKeys();
+    }
 
-        return $this->billingItems
-            ->filter(fn (ChoiceOption $option): bool => $option->pivot->part === $part)
-            ->values()
-            ->modelKeys();
+    /**
+     * What その他 means in one multi-select field, or null when その他 is not ticked.
+     */
+    public function otherText(string $field): ?string
+    {
+        return $this->selectedChoices($field)
+            ->first(fn (ChoiceOption $option): bool => $option->value === 'other')
+            ?->pivot->other_text;
+    }
+
+    /**
+     * The labels ticked in one multi-select field, その他 followed by what it is,
+     * e.g. ['保管', 'その他（梱包資材）'].
+     *
+     * @return list<string>
+     */
+    public function selectedChoiceLabels(string $field): array
+    {
+        return $this->selectedChoices($field)
+            ->map(fn (ChoiceOption $option): string => filled($option->pivot->other_text)
+                ? "{$option->label}（{$option->pivot->other_text}）"
+                : $option->label)
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, ChoiceOption>
+     */
+    private function selectedChoices(string $field): Collection
+    {
+        return $this->choices
+            ->filter(fn (ChoiceOption $option): bool => $option->pivot->field === $field)
+            ->values();
     }
 
     /**
@@ -391,15 +469,21 @@ class SurveyResponse extends Model
      */
     public function syncChoices(array $answers): void
     {
-        foreach (array_keys(self::multiChoiceFields()) as $field) {
-            $part = self::FIELDS[$field]['section'];
+        $catalog = app(ChoiceCatalog::class);
 
-            $this->billingItems()->wherePivot('part', $part)->sync(
-                collect($answers[$field] ?? [])->mapWithKeys(fn (int|string $id): array => [(int) $id => ['part' => $part]])->all(),
+        foreach (self::multiChoiceFields() as $field => $definition) {
+            $otherId = $catalog->optionIdByValue($definition['category'], 'other');
+            $otherText = $answers[self::otherInputName($field)] ?? null;
+
+            $this->choices()->wherePivot('field', $field)->sync(
+                collect($answers[$field] ?? [])->mapWithKeys(fn (int|string $id): array => [(int) $id => [
+                    'field' => $field,
+                    'other_text' => (int) $id === $otherId && filled($otherText) ? $otherText : null,
+                ]])->all(),
             );
         }
 
-        $this->unsetRelation('billingItems');
+        $this->unsetRelation('choices');
     }
 
     /**
@@ -413,9 +497,25 @@ class SurveyResponse extends Model
     /**
      * @return Attribute<list<int>, never>
      */
+    protected function dataSourceOptionIds(): Attribute
+    {
+        return Attribute::get(fn (): array => $this->selectedChoiceIds('data_source_option_ids'));
+    }
+
+    /**
+     * @return Attribute<list<int>, never>
+     */
     protected function detailItemIds(): Attribute
     {
         return Attribute::get(fn (): array => $this->selectedChoiceIds('detail_item_ids'));
+    }
+
+    /**
+     * @return Attribute<list<int>, never>
+     */
+    protected function detailDataSourceOptionIds(): Attribute
+    {
+        return Attribute::get(fn (): array => $this->selectedChoiceIds('detail_data_source_option_ids'));
     }
 
     /**
@@ -444,7 +544,7 @@ class SurveyResponse extends Model
     #[Scope]
     protected function withMasters(Builder $query): Builder
     {
-        return $query->with(['employee', 'customer', 'office', 'billingItems']);
+        return $query->with(['employee', 'customer', 'office', 'choices']);
     }
 
     /**

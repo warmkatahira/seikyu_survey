@@ -2,7 +2,7 @@
 @php
     $value = match ($field['type']) {
         'choice' => $catalog->label($response->{$name}),
-        'choices' => $response->{$name} !== [] ? collect($response->{$name})->map($catalog->label(...))->implode('、') : null,
+        'choices' => $response->{$name} !== [] ? implode('、', $response->selectedChoiceLabels($name)) : null,
         'number' => $response->{$name} !== null ? $response->{$name}.' 分' : null,
         default => filled($response->{$name}) ? $response->{$name} : null,
     };

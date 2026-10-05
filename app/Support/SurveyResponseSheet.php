@@ -52,7 +52,7 @@ class SurveyResponseSheet
                 foreach (SurveyResponse::FIELDS as $field => $definition) {
                     $row[] = match ($definition['type']) {
                         'choice' => $this->catalog->label($response->{$field}) ?? '',
-                        'choices' => collect($response->{$field})->map(fn (int $id) => $this->catalog->label($id))->implode('、'),
+                        'choices' => implode('、', $response->selectedChoiceLabels($field)),
                         'number' => $response->{$field} ?? '',
                         default => (string) ($response->{$field} ?? ''),
                     };

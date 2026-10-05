@@ -41,7 +41,7 @@ class SurveyResponseTest extends TestCase
             'customer_id' => $customer->id,
             'office_id' => $office->id,
             'cover_item_ids' => [$this->option('billing_item', 'storage')],
-            'data_source_primary_option_id' => $this->option('data_source', 'excel_own'),
+            'data_source_option_ids' => [$this->option('data_source', 'excel_own'), $this->option('data_source', 'wms')],
             'dependency_option_id' => $this->option('dependency', 'none_only_me'),
             'digitization_request_option_id' => $this->option('yes_no', 'yes'),
             'creation_minutes' => 45,
@@ -58,6 +58,10 @@ class SurveyResponseTest extends TestCase
             'creation_minutes' => 45,
             'notes' => '保管日数の集計を手で数えている。',
         ]);
+        $this->assertSame(
+            [$this->option('data_source', 'wms'), $this->option('data_source', 'excel_own')],
+            SurveyResponse::query()->sole()->data_source_option_ids,
+        );
     }
 
     public function test_the_answer_form_sent_in_the_background_is_told_where_to_go_next(): void
@@ -100,10 +104,10 @@ class SurveyResponseTest extends TestCase
             ->post(route('responses.store'), [
                 'employee_id' => $employee->id,
                 'customer_id' => $customer->id,
-                // A 自分以外に作成できる人 option offered where the 締め日 dropdown is expected.
-                'closing_day_option_id' => $this->option('dependency', 'unknown'),
+                // A 自分以外に作成できる人 option offered where the 実績の記録タイミング dropdown is expected.
+                'record_timing_option_id' => $this->option('dependency', 'unknown'),
             ])
-            ->assertSessionHasErrors('closing_day_option_id');
+            ->assertSessionHasErrors('record_timing_option_id');
 
         $this->assertDatabaseCount('survey_responses', 0);
     }
@@ -238,7 +242,7 @@ class SurveyResponseTest extends TestCase
         $answer = SurveyResponse::factory()
             ->for(Customer::factory()->state(['code' => '1111', 'name' => '株式会社ＡＡＡＡ']))
             ->create([
-                'closing_day_option_id' => $this->option('closing_day', 'month_end'),
+                'record_timing_option_id' => $this->option('record_timing', 'daily'),
                 'creation_minutes' => 45,
                 'notes' => "月末に手作業で集計している。\n繁忙期は2日かかる。",
             ]);
@@ -251,7 +255,7 @@ class SurveyResponseTest extends TestCase
             ->get(route('responses.show', $answer))
             ->assertOk()
             ->assertSee('株式会社ＡＡＡＡ')
-            ->assertSeeInOrder(['締め日', '月末', '鑑について', '作成時間（分）', '45 分', '明細について', '繁忙期は2日かかる。'])
+            ->assertSeeInOrder(['鑑について', '実績入力タイミング', '毎日その都度入力している', '作成時間（分）', '45 分', '明細について', '繁忙期は2日かかる。'])
             ->assertSee('未回答')
             ->assertDontSee('name="creation_minutes"', false);
     }
@@ -280,15 +284,15 @@ class SurveyResponseTest extends TestCase
 
     public function test_an_answer_keeps_showing_an_option_that_was_later_deactivated(): void
     {
-        $deactivated = ChoiceOption::query()->find($this->option('closing_day', 'month_end'));
-        $answer = SurveyResponse::factory()->create(['closing_day_option_id' => $deactivated->id]);
+        $deactivated = ChoiceOption::query()->find($this->option('record_timing', 'daily'));
+        $answer = SurveyResponse::factory()->create(['record_timing_option_id' => $deactivated->id]);
 
         $deactivated->update(['is_active' => false]);
 
         $this->actingAs($this->respondent())
             ->get(route('responses.edit', $answer))
             ->assertOk()
-            ->assertSee('月末（無効）');
+            ->assertSee('毎日その都度入力している（無効）');
     }
 
     public function test_the_form_asks_about_the_cover_and_the_detail_separately(): void
@@ -355,6 +359,78 @@ class SurveyResponseTest extends TestCase
         $this->assertSame([], $answer->detail_item_ids);
     }
 
+    public function test_a_cover_only_invoice_keeps_no_detail_answers(): void
+    {
+        $this->actingAs($this->respondent())
+            ->get(route('responses.create'))
+            ->assertSeeInOrder(['基本情報', '請求書の構成', '鑑のみ', '鑑と明細', '鑑について'])
+            ->assertSee('data-cover-only', false);
+
+        // 明細 answers filled in before switching to 鑑のみ are dropped on save.
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), [
+                'employee_id' => Employee::factory()->create()->id,
+                'customer_id' => Customer::factory()->create()->id,
+                'office_id' => Office::factory()->create()->id,
+                'invoice_composition_option_id' => $this->option('invoice_composition', 'cover_only'),
+                'cover_item_ids' => [$this->option('billing_item', 'storage')],
+                'creation_minutes' => 30,
+                'detail_item_ids' => [$this->option('billing_item', 'other')],
+                'detail_item_ids_other' => '使われない',
+                'detail_format_option_id' => $this->option('detail_format', 'excel_own'),
+                'detail_creation_minutes' => 60,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $answer = SurveyResponse::query()->sole();
+        $this->assertTrue($answer->isCoverOnly());
+        $this->assertSame([$this->option('billing_item', 'storage')], $answer->cover_item_ids);
+        $this->assertSame([], $answer->detail_item_ids);
+        $this->assertNull($answer->detail_format_option_id);
+        $this->assertNull($answer->detail_creation_minutes);
+        $this->assertSame(30, $answer->totalMinutes());
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.show', $answer))
+            ->assertSeeInOrder(['請求書の構成', '鑑のみ', '鑑について'])
+            ->assertDontSee('明細について');
+    }
+
+    public function test_ticking_other_asks_what_it_is(): void
+    {
+        $base = [
+            'employee_id' => Employee::factory()->create()->id,
+            'customer_id' => Customer::factory()->create()->id,
+            'office_id' => Office::factory()->create()->id,
+        ];
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.create'))
+            ->assertSee('name="cover_item_ids_other"', false)
+            ->assertSee('name="data_source_option_ids_other"', false);
+
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), $base + [
+                'cover_item_ids' => [$this->option('billing_item', 'storage'), $this->option('billing_item', 'other')],
+                'cover_item_ids_other' => '梱包資材',
+                'data_source_option_ids' => [$this->option('data_source', 'other')],
+                'data_source_option_ids_other' => '顧客ポータルのCSV',
+                // その他 is not ticked here, so the text is not kept.
+                'detail_item_ids' => [$this->option('billing_item', 'storage')],
+                'detail_item_ids_other' => '使われない',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $answer = SurveyResponse::query()->sole();
+        $this->assertSame('梱包資材', $answer->otherText('cover_item_ids'));
+        $this->assertNull($answer->otherText('detail_item_ids'));
+        $this->assertDatabaseMissing('survey_response_choices', ['other_text' => '使われない']);
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.show', $answer))
+            ->assertSeeInOrder(['鑑に載せている項目', '保管、その他（梱包資材）', '実績データの出どころ', 'その他（顧客ポータルのCSV）']);
+    }
+
     public function test_an_option_from_another_dropdown_cannot_be_ticked_as_a_billing_item(): void
     {
         $this->actingAs($this->respondent())
@@ -362,7 +438,7 @@ class SurveyResponseTest extends TestCase
                 'employee_id' => Employee::factory()->create()->id,
                 'customer_id' => Customer::factory()->create()->id,
                 'office_id' => Office::factory()->create()->id,
-                'detail_item_ids' => [$this->option('closing_day', 'month_end')],
+                'detail_item_ids' => [$this->option('record_timing', 'daily')],
             ])
             ->assertSessionHasErrors('detail_item_ids.0');
 

@@ -43,6 +43,8 @@
 
         @foreach ($sections as $sectionKey => $sectionLabel)
             @continue($sectionKey === 'basic' || empty($fieldsBySection[$sectionKey]))
+            {{-- 鑑のみ has no 明細 to show. --}}
+            @continue($sectionKey === 'detail' && $response->isCoverOnly())
 
             <x-section-card :title="$sectionLabel" class="space-y-6">
                 @foreach ($fieldsBySection[$sectionKey] as $groupKey => $fields)

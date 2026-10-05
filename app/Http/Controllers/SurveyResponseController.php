@@ -13,6 +13,7 @@ use App\Support\Xlsx;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -81,8 +82,9 @@ class SurveyResponseController extends Controller
     public function store(SurveyResponseRequest $request): RedirectResponse|JsonResponse
     {
         $response = DB::transaction(function () use ($request): SurveyResponse {
-            $response = SurveyResponse::create($request->safe()->except(array_keys(SurveyResponse::multiChoiceFields())));
-            $response->syncChoices($request->validated());
+            $answers = SurveyResponse::withoutDetailIfCoverOnly($request->validated());
+            $response = SurveyResponse::create(Arr::except($answers, SurveyResponse::choiceInputNames()));
+            $response->syncChoices($answers);
 
             return $response;
         });
@@ -101,7 +103,7 @@ class SurveyResponseController extends Controller
         $previous = url()->previous();
 
         return view('responses.show', [
-            'response' => $response->load(['employee', 'customer', 'office', 'billingItems']),
+            'response' => $response->load(['employee', 'customer', 'office', 'choices']),
             'catalog' => $this->catalog,
             // Back to the list as it was left (filters and page), when that is where we came from.
             'backUrl' => parse_url($previous, PHP_URL_PATH) === '/responses' ? $previous : route('responses.index'),
@@ -116,8 +118,9 @@ class SurveyResponseController extends Controller
     public function update(SurveyResponseRequest $request, SurveyResponse $response): RedirectResponse|JsonResponse
     {
         DB::transaction(function () use ($request, $response): void {
-            $response->update($request->safe()->except(array_keys(SurveyResponse::multiChoiceFields())));
-            $response->syncChoices($request->validated());
+            $answers = SurveyResponse::withoutDetailIfCoverOnly($request->validated());
+            $response->update(Arr::except($answers, SurveyResponse::choiceInputNames()));
+            $response->syncChoices($answers);
         });
 
         return $this->saved($request, route('responses.index'), "「{$response->customerLabel()}」の回答を更新しました。");

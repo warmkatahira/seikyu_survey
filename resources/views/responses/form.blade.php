@@ -8,7 +8,8 @@
     <a href="{{ route('responses.index') }}" class="text-sm text-slate-600 underline underline-offset-2 hover:text-slate-900">← 回答一覧に戻る</a>
 </div>
 
-<form method="POST" action="{{ $action }}" class="space-y-5" data-send-form>
+{{-- group/form lets 明細について hide itself while 請求書の構成 is 鑑のみ (CSS only, via group-has). --}}
+<form method="POST" action="{{ $action }}" class="group/form space-y-5" data-send-form>
     @csrf
     @if ($response->exists)
         @method('PUT')
@@ -44,7 +45,7 @@
             </x-field>
 
             <x-field name="customer_id" label="顧客名" required
-                hint="請求書を作成している顧客を選んでください。1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録し、「作成区分」で区別してください。顧客名の後ろの（）は、その顧客についてすでに登録されている回答の件数です。">
+                hint="1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録し、「作成区分」で区別してください。顧客名の後ろの（）は、その顧客についてすでに登録されている回答の件数です。">
                 <x-select name="customer_id" :selected="$response->customer_id" placeholder="顧客名を入力して検索"
                     data-searchable>
                     @foreach ($customers as $customer)
@@ -71,21 +72,23 @@
     @foreach ($sections as $sectionKey => $sectionLabel)
         @continue($sectionKey === 'basic' || empty($fieldsBySection[$sectionKey]))
 
-        <x-section-card :title="$sectionLabel" class="space-y-6">
-            @foreach ($fieldsBySection[$sectionKey] as $groupKey => $fields)
-                <div>
-                    @if ($groupKey !== '')
-                        <h3 class="mb-3 border-l-4 border-emerald-500 pl-2 text-sm font-semibold text-slate-700">{{ $groups[$groupKey] }}</h3>
-                    @endif
+        <div class="{{ $sectionKey === 'detail' ? 'group-has-[option[data-cover-only]:checked]/form:hidden' : '' }}">
+            <x-section-card :title="$sectionLabel" class="space-y-6">
+                @foreach ($fieldsBySection[$sectionKey] as $groupKey => $fields)
+                    <div>
+                        @if ($groupKey !== '')
+                            <h3 class="mb-3 border-l-4 border-emerald-500 pl-2 text-sm font-semibold text-slate-700">{{ $groups[$groupKey] }}</h3>
+                        @endif
 
-                    <div class="grid gap-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
-                        @foreach ($fields as $name => $field)
-                            @include('responses.partials.answer-field')
-                        @endforeach
+                        <div class="grid gap-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
+                            @foreach ($fields as $name => $field)
+                                @include('responses.partials.answer-field')
+                            @endforeach
+                        </div>
                     </div>
-                </div>
-            @endforeach
-        </x-section-card>
+                @endforeach
+            </x-section-card>
+        </div>
     @endforeach
 
     <div class="flex flex-wrap items-center gap-3">

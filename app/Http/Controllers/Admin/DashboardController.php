@@ -29,8 +29,8 @@ class DashboardController extends Controller
             'answeredCustomerCount' => SurveyResponse::query()->distinct()->count('customer_id'),
             'byEmployee' => $this->countsByEmployee(),
             'breakdowns' => [
-                '請求項目（鑑に載せている項目／作成している明細）' => $this->countsByBillingItem($catalog),
-                '実績データの出どころ（主）' => $this->coverAndDetailCounts('data_source_primary_option_id', $catalog),
+                '請求項目（鑑に載せている項目／作成している明細）' => $this->tickedCounts('cover_item_ids', 'detail_item_ids', $catalog),
+                '実績データの出どころ（複数選択）' => $this->tickedCounts('data_source_option_ids', 'detail_data_source_option_ids', $catalog),
                 '自分以外に作成できる人' => $this->coverAndDetailCounts('dependency_option_id', $catalog),
                 '実績の記録タイミング' => $this->coverAndDetailCounts('record_timing_option_id', $catalog),
             ],
@@ -94,26 +94,27 @@ class DashboardController extends Controller
     }
 
     /**
-     * How many answers carry each 請求項目 on the 鑑 and as a 明細, every item listed even when
-     * nobody ticked it.
+     * One multi-select asked of both 鑑 and 明細: how many answers ticked each option in either,
+     * every option listed even when nobody ticked it.
      *
      * @return Collection<int, object{label: string, cover: int, detail: int}>
      */
-    private function countsByBillingItem(ChoiceCatalog $catalog): Collection
+    private function tickedCounts(string $coverField, string $detailField, ChoiceCatalog $catalog): Collection
     {
-        $counts = DB::table('survey_response_billing_items')
-            ->selectRaw('part, choice_option_id, COUNT(*) as total')
-            ->groupBy('part', 'choice_option_id')
+        $counts = DB::table('survey_response_choices')
+            ->selectRaw('field, choice_option_id, COUNT(*) as total')
+            ->whereIn('field', [$coverField, $detailField])
+            ->groupBy('field', 'choice_option_id')
             ->get();
-        $count = fn (string $part, int $optionId): int => (int) $counts
-            ->first(fn (object $row): bool => $row->part === $part && (int) $row->choice_option_id === $optionId)
+        $count = fn (string $field, int $optionId): int => (int) $counts
+            ->first(fn (object $row): bool => $row->field === $field && (int) $row->choice_option_id === $optionId)
             ?->total;
 
-        return $catalog->optionsIncluding('billing_item', $counts->pluck('choice_option_id')->all())
+        return $catalog->optionsIncluding(SurveyResponse::FIELDS[$coverField]['category'], $counts->pluck('choice_option_id')->all())
             ->map(fn (ChoiceOption $option): object => (object) [
                 'label' => $option->label,
-                'cover' => $count('cover', $option->id),
-                'detail' => $count('detail', $option->id),
+                'cover' => $count($coverField, $option->id),
+                'detail' => $count($detailField, $option->id),
             ]);
     }
 }
