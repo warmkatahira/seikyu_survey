@@ -1,5 +1,7 @@
+{{-- The success message drops in and folds itself away after a few seconds (resources/js/motion.js);
+     errors stay until the page changes, as they still need reading. --}}
 @if (session('status'))
-    <div class="mb-4 rounded-md border border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+    <div data-flash-autohide role="status" class="mb-4 rounded-md border border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-900">
         {{ session('status') }}
     </div>
 @endif

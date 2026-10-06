@@ -8,7 +8,8 @@
     ][$name] ?? null;
 @endphp
 <x-field accent :name="$name" :label="$field['label']" :hint="$field['hint'] ?? null" :note="$field['note'] ?? null"
-    :multiple="$field['type'] === 'choices'" :required="App\Models\SurveyResponse::isRequired($name)" :class="$followUpClass">
+    :multiple="$field['type'] === 'choices'" :required="App\Models\SurveyResponse::isRequired($name)" :class="$followUpClass"
+    :data-reveal="$followUpClass !== null">
     @if ($field['type'] === 'choices')
         {{-- After a rejected submit the boxes come back as they were sent, even when none was ticked. --}}
         @php
@@ -34,9 +35,11 @@
                         {{ $option->label }}{{ $option->is_active ? '' : '（無効）' }}
                         <span aria-hidden="true"
                             class="absolute top-1/2 right-3 grid size-[18px] -translate-y-1/2 place-items-center rounded-md border-[1.5px] border-slate-300 bg-white transition group-has-checked/tile:border-orange-600 group-has-checked/tile:bg-orange-600 motion-reduce:transition-none">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                class="size-3 text-white opacity-0 transition group-has-checked/tile:opacity-100 motion-reduce:transition-none">
-                                <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z" clip-rule="evenodd" />
+                            {{-- The tick draws itself in when ticked (its stroke is revealed along its length). --}}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="size-3 text-white">
+                                <path d="M4.5 10.5l3.5 3.5 7.5-8" pathLength="1"
+                                    class="[stroke-dasharray:1] [stroke-dashoffset:1] transition-[stroke-dashoffset] delay-75 duration-300 ease-out group-has-checked/tile:[stroke-dashoffset:0]" />
                             </svg>
                         </span>
                     </label>

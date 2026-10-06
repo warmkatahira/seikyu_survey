@@ -264,3 +264,95 @@
         opacity: 0;
     }
 }
+
+/*
+ * Small motions on the answer form, the messages and the totals. Like the send animation they
+ * ignore prefers-reduced-motion: with it honoured the user saw no animation at all. The ones
+ * reacting to an answer are switched on by script at that moment only, so a page opening with
+ * answers already chosen (編集) does not set every tile moving at once.
+ */
+
+/* A question or section that has just appeared (a follow-up, 明細について after 鑑のみ) slides in. */
+.motion-reveal {
+    animation: motion-reveal 350ms ease-out both;
+}
+
+/* A tile just chosen gives a small bounce. */
+.motion-pop {
+    animation: motion-pop 280ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+/* The question 「あと◯件 →」 jumped to is ringed for a moment. */
+.motion-flash {
+    border-radius: 0.75rem;
+    animation: motion-flash 1.8s ease-out;
+}
+
+/* The progress bar reaching 100%: a gleam runs across it. */
+.motion-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.75) 50%, transparent 70%);
+    animation: motion-shine 1s 300ms ease-out both;
+}
+
+/* A question sent back with an error shakes, and its message rises in. */
+[data-field-error] {
+    animation: motion-shake 400ms ease;
+}
+
+/* A success message drops in (it is faded out and folded away by script after a few seconds). */
+[data-flash-autohide] {
+    animation: motion-drop 450ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes motion-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+}
+
+@keyframes motion-pop {
+    40% {
+        transform: scale(1.04);
+    }
+}
+
+@keyframes motion-flash {
+    0%,
+    30% {
+        box-shadow: 0 0 0 6px rgb(249 115 22 / 0.45);
+    }
+    100% {
+        box-shadow: 0 0 0 6px rgb(249 115 22 / 0);
+    }
+}
+
+@keyframes motion-shine {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes motion-shake {
+    20%,
+    60% {
+        transform: translateX(-6px);
+    }
+    40%,
+    80% {
+        transform: translateX(6px);
+    }
+}
+
+@keyframes motion-drop {
+    from {
+        opacity: 0;
+        transform: translateY(-14px);
+    }
+}

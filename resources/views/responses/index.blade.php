@@ -4,15 +4,15 @@
     <div class="mb-5 grid gap-3 sm:grid-cols-3">
         <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
             <p class="text-xs text-slate-500">記入済みの顧客件数</p>
-            <p class="mt-1 text-2xl font-semibold">{{ number_format($totals['answered']) }}<span class="ms-1 text-sm font-normal text-slate-500">件</span></p>
+            <p class="mt-1 text-2xl font-semibold"><span data-count-up>{{ number_format($totals['answered']) }}</span><span class="ms-1 text-sm font-normal text-slate-500">件</span></p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
             <p class="text-xs text-slate-500">作成時間の合計</p>
-            <p class="mt-1 text-2xl font-semibold">{{ number_format($totals['minutes']) }}<span class="ms-1 text-sm font-normal text-slate-500">分</span></p>
+            <p class="mt-1 text-2xl font-semibold"><span data-count-up>{{ number_format($totals['minutes']) }}</span><span class="ms-1 text-sm font-normal text-slate-500">分</span></p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
             <p class="text-xs text-slate-500">うち「自分しか作れない」</p>
-            <p class="mt-1 text-2xl font-semibold">{{ number_format($totals['sole_owner']) }}<span class="ms-1 text-sm font-normal text-slate-500">件</span></p>
+            <p class="mt-1 text-2xl font-semibold"><span data-count-up>{{ number_format($totals['sole_owner']) }}</span><span class="ms-1 text-sm font-normal text-slate-500">件</span></p>
         </div>
     </div>
 

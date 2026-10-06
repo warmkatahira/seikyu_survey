@@ -29,7 +29,7 @@
         </div>
         <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
             <div data-required-fill
-                class="h-full w-0 rounded-full bg-linear-to-r from-orange-600 to-orange-400 transition-[width] duration-300 motion-reduce:transition-none"></div>
+                class="relative h-full w-0 overflow-hidden rounded-full bg-linear-to-r from-orange-600 to-orange-400 transition-[width] duration-300 motion-reduce:transition-none"></div>
         </div>
     </div>
 
@@ -96,7 +96,7 @@
     @foreach ($sections as $sectionKey => $sectionLabel)
         @continue($sectionKey === 'basic' || empty($fieldsBySection[$sectionKey]))
 
-        <div class="{{ $sectionKey === 'detail' ? 'group-has-[[data-cover-only]:checked]/form:hidden' : '' }}">
+        <div class="{{ $sectionKey === 'detail' ? 'group-has-[[data-cover-only]:checked]/form:hidden' : '' }}" @if ($sectionKey === 'detail') data-reveal @endif>
             <x-section-card :title="$sectionLabel">
                 <div class="grid gap-5">
                     @foreach ($fieldsBySection[$sectionKey] as $name => $field)
@@ -121,6 +121,14 @@
 
 @pushOnce('scripts')
     <script>
+        // Restarts a one-off motion class from app.css on an element, so it plays again on every trigger.
+        const replayMotion = (element, className) => {
+            element.classList.remove(className);
+            void element.offsetWidth;
+            element.classList.add(className);
+            element.addEventListener('animationend', () => element.classList.remove(className), { once: true });
+        };
+
         // Picking a respondent fills in their own office, until someone chooses the office
         // by hand: from then on (and on an answer that already has one) it is left alone.
         document.addEventListener('change', (event) => {
@@ -232,6 +240,9 @@
             const visibleFields = () => Array.from(document.querySelectorAll('[data-required-field]'))
                 .filter((field) => field.offsetParent !== null);
 
+            const fill = progress.querySelector('[data-required-fill]');
+            let leftBefore = null;
+
             const refresh = () => {
                 const fields = visibleFields();
                 const answered = fields.filter(isAnswered).length;
@@ -239,7 +250,16 @@
 
                 progress.querySelector('[data-required-answered]').textContent = answered;
                 progress.querySelector('[data-required-total]').textContent = fields.length;
-                progress.querySelector('[data-required-fill]').style.width = `${fields.length === 0 ? 100 : (answered / fields.length) * 100}%`;
+                fill.style.width = `${fields.length === 0 ? 100 : (answered / fields.length) * 100}%`;
+
+                // The last one just answered (not a page opening complete): the bar gleams and
+                // 「すべて回答済み ✓」 pops in.
+                if (leftBefore !== null && leftBefore > 0 && left === 0) {
+                    replayMotion(fill, 'motion-shine');
+                    replayMotion(jump, 'motion-pop');
+                }
+                leftBefore = left;
+
                 jump.toggleAttribute('data-done', left === 0);
                 jump.textContent = left === 0 ? 'すべて回答済み ✓' : `あと${left}件 →`;
                 jump.title = left === 0 ? '' : '未回答の必須項目へ移動します';
@@ -251,6 +271,7 @@
                 if (field) {
                     field.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     field.querySelector('input:not([type=hidden]), select, textarea')?.focus({ preventScroll: true });
+                    replayMotion(field, 'motion-flash');
                 }
             });
 
@@ -258,6 +279,34 @@
             ['input', 'change', 'click'].forEach((type) => document.addEventListener(type, () => requestAnimationFrame(refresh)));
             refresh();
         })();
+
+        // A tile just chosen bounces, and a question or section that has just appeared (a
+        // follow-up, 明細について when 鑑のみ is undone) slides in. Only on an actual change, so
+        // nothing moves while the page opens.
+        (() => {
+            const revealables = Array.from(document.querySelectorAll('[data-send-form] [data-reveal]'));
+            const shown = new Map(revealables.map((element) => [element, element.offsetParent !== null]));
+
+            document.addEventListener('change', (event) => {
+                const pick = event.target.closest('[data-send-form] input[type=radio], [data-send-form] input[type=checkbox]');
+
+                if (pick?.checked) {
+                    replayMotion(pick.closest('label'), 'motion-pop');
+                }
+
+                requestAnimationFrame(() => revealables.forEach((element) => {
+                    const visible = element.offsetParent !== null;
+
+                    if (visible && ! shown.get(element)) {
+                        replayMotion(element, 'motion-reveal');
+                    }
+                    shown.set(element, visible);
+                }));
+            });
+        })();
+
+        // A question sent back with an error is brought into view (it shakes there, see app.css).
+        document.querySelector('[data-send-form] [data-field-error]')?.scrollIntoView({ block: 'center' });
 
         // 選択を外す: a one-answer question goes back to 未回答 (the hidden empty input is then sent).
         document.addEventListener('click', (event) => {

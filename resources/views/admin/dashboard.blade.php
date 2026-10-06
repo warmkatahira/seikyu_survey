@@ -9,16 +9,19 @@
     </div>
 
     <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {{-- Each figure counts up from zero on load (data-count-up, resources/js/motion.js). --}}
         @foreach ([
-            ['記入済みの顧客件数', number_format($answered), '件'],
-            ['作成時間の合計', number_format($totalMinutes), '分'],
-            ['うち「自分しか作れない」', number_format($soleOwnerCount), '件'],
-            ['回答のあった顧客数', number_format($answeredCustomerCount).' / '.number_format($customerCount), '社'],
-        ] as [$statLabel, $statValue, $statUnit])
+            ['記入済みの顧客件数', [$answered], '件'],
+            ['作成時間の合計', [$totalMinutes], '分'],
+            ['うち「自分しか作れない」', [$soleOwnerCount], '件'],
+            ['回答のあった顧客数', [$answeredCustomerCount, $customerCount], '社'],
+        ] as [$statLabel, $statFigures, $statUnit])
             <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
                 <p class="text-xs text-slate-500">{{ $statLabel }}</p>
                 <p class="mt-1 text-2xl font-semibold">
-                    {{ $statValue }}<span class="ms-1 text-sm font-normal text-slate-500">{{ $statUnit }}</span>
+                    @foreach ($statFigures as $figure)
+                        @if (! $loop->first) / @endif<span data-count-up>{{ number_format($figure) }}</span>
+                    @endforeach<span class="ms-1 text-sm font-normal text-slate-500">{{ $statUnit }}</span>
                 </p>
             </div>
         @endforeach

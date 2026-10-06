@@ -671,6 +671,35 @@ class SurveyResponseTest extends TestCase
         }
     }
 
+    public function test_the_pages_carry_the_hooks_their_motions_run_on(): void
+    {
+        // A question sent back with an error shakes; the others do not.
+        $sentBack = $this->actingAs($this->respondent())
+            ->from(route('responses.create'))
+            ->followingRedirects()
+            ->post(route('responses.store'), $this->answer([
+                'employee_id' => Employee::factory()->create()->id,
+                'customer_id' => Customer::factory()->create()->id,
+                'office_id' => Office::factory()->create()->id,
+                'dependency_option_id' => null,
+            ]))
+            ->getContent();
+        $this->assertMatchesRegularExpression('/data-field-label="自分以外に作成できる人"\s+data-field-error/', $sentBack);
+        $this->assertDoesNotMatchRegularExpression('/data-field-label="請求書の構成"\s+data-field-error/', $sentBack);
+
+        // Only 明細について and the follow-up slide in when they appear.
+        $form = $this->get(route('responses.create'))->getContent();
+        $this->assertSame(2, preg_match_all('/\sdata-reveal(="data-reveal")?\s/', $form));
+        $this->assertMatchesRegularExpression('/data-reveal[^>]*>\s*<label for="detail_unmailed_option_ids"/', $form);
+
+        // The success message folds itself away; the totals count up.
+        SurveyResponse::factory()->create(['creation_minutes' => 1200, 'detail_creation_minutes' => 34]);
+        $this->followingRedirects()
+            ->delete(route('responses.destroy', SurveyResponse::factory()->create(['creation_minutes' => 5])))
+            ->assertSee('data-flash-autohide', false)
+            ->assertSee('<span data-count-up>1,234</span>', false);
+    }
+
     private function respondent(): User
     {
         return User::factory()->create(['role' => User::ROLE_RESPONDENT]);

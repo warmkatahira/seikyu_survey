@@ -8,8 +8,10 @@
 @endphp
 
 {{-- data-required-field / data-field-label feed the answer form's 「必須項目 あと◯件」 counter.
+     data-field-error makes a question sent back with an error shake (app.css).
      `accent` puts the accent-coloured bar to the left of the label, marking each question on the answer form. --}}
-<div {{ $attributes->merge(['class' => 'space-y-1']) }} @if ($required) data-required-field data-field-label="{{ $label }}" @endif>
+<div {{ $attributes->merge(['class' => 'space-y-1']) }} @if ($required) data-required-field data-field-label="{{ $label }}" @endif
+    @if ($errors->has($name) || $errors->has($name.'.*')) data-field-error @endif>
     <label for="{{ $name }}" @class(['flex items-center gap-2 text-sm font-medium text-slate-800', 'border-l-4 border-orange-500 pl-2' => $accent])>
         {{ $label }}
         @if ($required)
