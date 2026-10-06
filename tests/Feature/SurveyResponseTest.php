@@ -92,6 +92,23 @@ class SurveyResponseTest extends TestCase
                 'office_id' => Office::factory()->create()->id,
             ]))
             ->assertSessionHas('survey.last_employee_id', $employee->id);
+
+        // The next form starts with that respondent again, but with the office left empty.
+        $this->get(route('responses.create'))
+            ->assertViewHas('response', fn (SurveyResponse $response) => $response->employee_id === $employee->id && $response->office_id === null);
+    }
+
+    public function test_validation_messages_are_in_japanese(): void
+    {
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), ['creation_minutes' => 'abc', 'billing_category' => str_repeat('あ', 51)])
+            ->assertSessionHasErrors([
+                'employee_id' => '請求書の作成担当者を選択してください。',
+                'dependency_option_id' => '自分以外に作成できる人を選択してください。',
+                'data_source_option_ids' => '鑑：実績データの出どころを選択してください。',
+                'creation_minutes' => '鑑：作成時間（分）は整数で入力してください。',
+                'billing_category' => '作成区分は50文字以内で入力してください。',
+            ]);
     }
 
     public function test_an_option_belonging_to_another_dropdown_is_rejected(): void

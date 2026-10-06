@@ -50,14 +50,20 @@ class SurveyResponseRequest extends FormRequest
     }
 
     /**
+     * Questions answered by choosing (the dropdowns and the tiles) ask to 「選択」 rather than the
+     * 「入力」 of lang/ja/validation.php, and a ticked その他 asks what it is.
+     *
      * @return array<string, string>
      */
     public function messages(): array
     {
-        return collect($this->otherFields())->keys()
-            ->mapWithKeys(fn (string $field): array => [
+        $chosen = ['employee_id', 'customer_id', 'office_id', ...array_keys(SurveyResponse::choiceFields() + SurveyResponse::multiChoiceFields())];
+
+        return collect($chosen)
+            ->mapWithKeys(fn (string $field): array => ["{$field}.required" => ':attributeを選択してください。'])
+            ->merge(collect($this->otherFields())->keys()->mapWithKeys(fn (string $field): array => [
                 SurveyResponse::otherInputName($field).'.required' => '「その他」を選んだ場合は、その内容を入力してください。',
-            ])
+            ]))
             ->all();
     }
 

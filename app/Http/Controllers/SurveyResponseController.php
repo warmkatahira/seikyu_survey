@@ -67,13 +67,15 @@ class SurveyResponseController extends Controller
 
     public function create(Request $request): View
     {
-        $employeeId = $request->integer('employee_id')
-            ?: $request->session()->get(self::LAST_EMPLOYEE_KEY);
+        $chosenEmployeeId = $request->integer('employee_id');
 
-        // Respondents usually answer for their own office, so it starts out filled in.
+        // Respondents usually answer for their own office, so it starts out filled in when the
+        // respondent is chosen. After sending, only the respondent carries over and the office
+        // is left empty: the next customer may be another office's, and a stale office would be
+        // sent unnoticed.
         $response = new SurveyResponse([
-            'employee_id' => $employeeId,
-            'office_id' => $employeeId ? Employee::query()->whereKey($employeeId)->value('office_id') : null,
+            'employee_id' => $chosenEmployeeId ?: $request->session()->get(self::LAST_EMPLOYEE_KEY),
+            'office_id' => $chosenEmployeeId ? Employee::query()->whereKey($chosenEmployeeId)->value('office_id') : null,
         ]);
 
         return view('responses.create', $this->formData($response));

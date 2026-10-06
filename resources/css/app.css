@@ -356,3 +356,16 @@
         transform: translateY(-14px);
     }
 }
+
+/*
+ * The login page's backdrop (案C): two soft orange glows over faint horizontal ledger lines on
+ * a pale orange ground.
+ */
+.login-backdrop {
+    background:
+        radial-gradient(circle at 15% 20%, rgb(251 146 60 / 0.28), transparent 40%),
+        radial-gradient(circle at 85% 80%, rgb(234 88 12 / 0.22), transparent 45%),
+        repeating-linear-gradient(0deg, rgb(234 88 12 / 0.05) 0 1px, transparent 1px 28px),
+        #fff7ed;
+    background-attachment: fixed;
+}
