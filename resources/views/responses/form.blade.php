@@ -1,7 +1,6 @@
 @php
     $fieldsBySection = App\Models\SurveyResponse::fieldsBySection();
     $sections = App\Models\SurveyResponse::SECTIONS;
-    $groups = App\Models\SurveyResponse::GROUPS;
 @endphp
 
 <div class="mb-4">
@@ -30,14 +29,14 @@
         </div>
         <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
             <div data-required-fill
-                class="h-full w-0 rounded-full bg-linear-to-r from-emerald-600 to-emerald-400 transition-[width] duration-300 motion-reduce:transition-none"></div>
+                class="h-full w-0 rounded-full bg-linear-to-r from-orange-600 to-orange-400 transition-[width] duration-300 motion-reduce:transition-none"></div>
         </div>
     </div>
 
     {{-- One question per row, so a question with a hint box never pushes its neighbour's input out of line. --}}
     <x-section-card :title="$sections['basic']">
         <div class="grid gap-5">
-            <x-field name="employee_id" label="請求書の作成担当者（回答者）" required>
+            <x-field accent name="employee_id" label="請求書の作成担当者（回答者）" required>
                 <div class="sm:max-w-md">
                     <x-select name="employee_id" :selected="$response->employee_id" placeholder="氏名を入力して検索"
                         data-searchable data-employee-select>
@@ -55,7 +54,7 @@
                 </div>
             </x-field>
 
-            <x-field name="office_id" label="営業所・拠点" required>
+            <x-field accent name="office_id" label="営業所・拠点" required>
                 <x-select name="office_id" :selected="$response->office_id" placeholder="選択してください" data-office-select class="sm:max-w-md"
                     :data-office-picked="$response->exists || old('office_id') ? 'true' : null">
                     @foreach ($offices as $office)
@@ -66,7 +65,7 @@
                 </x-select>
             </x-field>
 
-            <x-field name="customer_id" label="顧客名" required
+            <x-field accent name="customer_id" label="顧客名" required
                 hint="顧客名の後ろの（）は、その顧客についてすでに登録されている回答の件数です。"
                 note="1社で請求書を複数に分けている場合は、請求書ごとに1件ずつ登録し、「作成区分」で区別してください。">
                 <div class="sm:max-w-md">
@@ -82,13 +81,13 @@
                 </div>
             </x-field>
 
-            <x-field name="billing_category" label="作成区分"
+            <x-field accent name="billing_category" label="作成区分"
                 hint="1社で請求書を分けて作成している場合のみ、どの請求書かがわかる名前をご記入ください（例：卸、通販）。1社1枚の場合は空欄で構いません。">
                 <x-text-input name="billing_category" :value="$response->billing_category" maxlength="50"
                     placeholder="例：通販" class="sm:max-w-60" />
             </x-field>
 
-            @foreach ($fieldsBySection['basic'][''] ?? [] as $name => $field)
+            @foreach ($fieldsBySection['basic'] ?? [] as $name => $field)
                 @include('responses.partials.answer-field')
             @endforeach
         </div>
@@ -98,20 +97,12 @@
         @continue($sectionKey === 'basic' || empty($fieldsBySection[$sectionKey]))
 
         <div class="{{ $sectionKey === 'detail' ? 'group-has-[[data-cover-only]:checked]/form:hidden' : '' }}">
-            <x-section-card :title="$sectionLabel" class="space-y-6">
-                @foreach ($fieldsBySection[$sectionKey] as $groupKey => $fields)
-                    <div>
-                        @if ($groupKey !== '')
-                            <h3 class="mb-3 border-l-4 border-emerald-500 pl-2 text-sm font-semibold text-slate-700">{{ $groups[$groupKey] }}</h3>
-                        @endif
-
-                        <div class="grid gap-5">
-                            @foreach ($fields as $name => $field)
-                                @include('responses.partials.answer-field')
-                            @endforeach
-                        </div>
-                    </div>
-                @endforeach
+            <x-section-card :title="$sectionLabel">
+                <div class="grid gap-5">
+                    @foreach ($fieldsBySection[$sectionKey] as $name => $field)
+                        @include('responses.partials.answer-field')
+                    @endforeach
+                </div>
             </x-section-card>
         </div>
     @endforeach
@@ -119,7 +110,7 @@
     <div class="flex flex-wrap items-center gap-3">
         {{-- Styled as "send": a filled accent pill with a paper-plane, distinct from the grey utility buttons. --}}
         <button type="submit" data-send-button
-            class="send-button group inline-flex items-center gap-2 rounded-full bg-emerald-600 px-7 py-2.5 text-sm font-semibold tracking-wide text-white shadow-md shadow-emerald-600/25 transition hover:bg-emerald-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 active:translate-y-px">
+            class="send-button group inline-flex items-center gap-2 rounded-full bg-orange-600 px-7 py-2.5 text-sm font-semibold tracking-wide text-white shadow-md shadow-orange-600/25 transition hover:bg-orange-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 active:translate-y-px">
             <span data-send-label>{{ $response->exists ? '更新する' : '回答する' }}</span>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="send-plane size-4 transition group-hover:translate-x-0.5" aria-hidden="true">
                 <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />

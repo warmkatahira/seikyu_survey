@@ -12,9 +12,9 @@
             class="flex flex-1 flex-wrap items-end gap-3" data-csv-drop>
             @csrf
             <label for="file" data-csv-zone
-                class="group flex min-w-72 flex-1 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center transition hover:border-slate-400 hover:bg-white data-dragging:border-emerald-500 data-dragging:bg-emerald-50 data-picked:border-solid data-picked:border-emerald-500 data-picked:bg-emerald-50/60">
+                class="group flex min-w-72 flex-1 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center transition hover:border-slate-400 hover:bg-white data-dragging:border-orange-500 data-dragging:bg-orange-50 data-picked:border-solid data-picked:border-orange-500 data-picked:bg-orange-50/60">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
-                    class="size-7 text-slate-400 transition group-data-dragging:-translate-y-0.5 group-data-dragging:text-emerald-600 group-data-picked:text-emerald-600">
+                    class="size-7 text-slate-400 transition group-data-dragging:-translate-y-0.5 group-data-dragging:text-orange-600 group-data-picked:text-orange-600">
                     <path d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z" />
                     <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
                 </svg>

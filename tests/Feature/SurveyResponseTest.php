@@ -303,9 +303,9 @@ class SurveyResponseTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder([
                 '基本情報',
-                '鑑について', '実績データの取得方法', '工数',
+                '鑑について', '実績データの出どころ', '作成時間（分）',
                 '明細について', '作成している明細', '保管', '入庫', '出庫', '梱包', '資材', '運賃', '作業', 'その他', '明細の形式', '明細の郵送',
-                '実績データの取得方法', '工数',
+                '実績データの出どころ', '実績の記録タイミング', '作成時間（分）',
                 'ツールの使用について', '現状使用しているツールについて', '運賃算出ツール（佐川急便）', '運賃算出ツール（ヤマト運輸）', '専用ツール',
                 '顧客からの要望', '自由記述',
             ])
@@ -322,7 +322,11 @@ class SurveyResponseTest extends TestCase
             ->assertDontSee('name="storage_fee_option_id"', false)
             ->assertSee('name="detail_creation_minutes"', false)
             ->assertDontSee('別紙明細の有無')
-            ->assertDontSee('単価・作成方法');
+            ->assertDontSee('単価・作成方法')
+            // No sub-headings: each question's own title carries the accent bar.
+            ->assertDontSee('実績データの取得方法')
+            ->assertDontSee('<h3', false)
+            ->assertSee('border-l-4 border-orange-500 pl-2', false);
     }
 
     public function test_data_sources_are_ticked_separately_for_the_cover_and_the_detail(): void

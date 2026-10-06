@@ -61,16 +61,6 @@ class SurveyResponse extends Model
     ];
 
     /**
-     * Sub-headings inside a section. 鑑について and 明細について ask the same groups.
-     *
-     * @var array<string, string>
-     */
-    public const GROUPS = [
-        'data_source' => '実績データの取得方法',
-        'workload' => '工数',
-    ];
-
-    /**
      * The 請求書の構成 option (`invoice_composition` value) meaning there is no 明細, so
      * 明細について is neither asked nor kept.
      */
@@ -105,7 +95,7 @@ class SurveyResponse extends Model
      * of that field it is asked for]. It shows, is required and is kept only while one of those
      * is chosen. See askedGiven().
      *
-     * @var array<string, array{section: string, group?: string, label: string, type: string, category?: string, hint?: string, note?: string, optional?: bool, except?: list<string>, asked_if?: array{string, list<string>}}>
+     * @var array<string, array{section: string, label: string, type: string, category?: string, hint?: string, note?: string, optional?: bool, except?: list<string>, asked_if?: array{string, list<string>}}>
      */
     public const FIELDS = [
         'invoice_composition_option_id' => [
@@ -134,7 +124,6 @@ class SurveyResponse extends Model
         // 鑑について
         'data_source_option_ids' => [
             'section' => 'cover',
-            'group' => 'data_source',
             'label' => '実績データの出どころ',
             'type' => 'choices',
             'category' => 'data_source',
@@ -142,7 +131,6 @@ class SurveyResponse extends Model
         ],
         'creation_minutes' => [
             'section' => 'cover',
-            'group' => 'workload',
             'label' => '作成時間（分）',
             'type' => 'number',
             'hint' => '鑑の作成にかかるおおよその時間を「分」でご記入ください。正確でなくて構いません。',
@@ -183,7 +171,6 @@ class SurveyResponse extends Model
         ],
         'detail_data_source_option_ids' => [
             'section' => 'detail',
-            'group' => 'data_source',
             'label' => '実績データの出どころ',
             'type' => 'choices',
             'category' => 'data_source',
@@ -192,7 +179,6 @@ class SurveyResponse extends Model
         ],
         'detail_record_timing_option_id' => [
             'section' => 'detail',
-            'group' => 'data_source',
             'label' => '実績の記録タイミング',
             'type' => 'choice',
             'category' => 'record_timing',
@@ -200,7 +186,6 @@ class SurveyResponse extends Model
         ],
         'detail_creation_minutes' => [
             'section' => 'detail',
-            'group' => 'workload',
             'label' => '作成時間（分）',
             'type' => 'number',
             'hint' => '明細の集計・作成にかかるおおよその時間を「分」でご記入ください。',
@@ -220,7 +205,7 @@ class SurveyResponse extends Model
             'label' => '請求書の電子化の要望',
             'type' => 'choice',
             'category' => 'digitization_request',
-            'hint' => '弊社から出している請求書を電子化してほしい、という話を顧客から受けたことがあるかどうかです。',
+            'hint' => '弊社から出している請求書を電子化してほしい、という話を顧客から受けたことがあるかどうかです。ここでの電子化とは、紙の請求書を郵送する代わりに、PDFをメールで送る、顧客のシステムやWeb上で受け取ってもらうなど、紙を使わずに請求書をやり取りすることです。',
         ],
         'notes' => [
             'optional' => true,
@@ -295,17 +280,16 @@ class SurveyResponse extends Model
     }
 
     /**
-     * FIELDS grouped under their section, then under their sub-heading ('' for fields asked
-     * before any sub-heading), for rendering the form and the answer page.
+     * FIELDS grouped under their section, for rendering the form and the answer page.
      *
-     * @return array<string, array<string, array<string, array{section: string, group?: string, label: string, type: string, category?: string, hint?: string}>>>
+     * @return array<string, array<string, array{section: string, label: string, type: string, category?: string, hint?: string}>>
      */
     public static function fieldsBySection(): array
     {
         $grouped = [];
 
         foreach (self::FIELDS as $name => $field) {
-            $grouped[$field['section']][$field['group'] ?? ''][$name] = $field;
+            $grouped[$field['section']][$name] = $field;
         }
 
         return $grouped;

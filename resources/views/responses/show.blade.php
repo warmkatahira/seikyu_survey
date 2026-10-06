@@ -1,6 +1,5 @@
 @php
     $sections = App\Models\SurveyResponse::SECTIONS;
-    $groups = App\Models\SurveyResponse::GROUPS;
     $fieldsBySection = App\Models\SurveyResponse::fieldsBySection();
 @endphp
 
@@ -30,7 +29,7 @@
                     </div>
                 @endforeach
 
-                @foreach ($fieldsBySection['basic'][''] ?? [] as $name => $field)
+                @foreach ($fieldsBySection['basic'] ?? [] as $name => $field)
                     @include('responses.partials.answer-value')
                 @endforeach
 
@@ -46,22 +45,14 @@
             {{-- 鑑のみ has no 明細 to show. --}}
             @continue($sectionKey === 'detail' && $response->isCoverOnly())
 
-            <x-section-card :title="$sectionLabel" class="space-y-6">
-                @foreach ($fieldsBySection[$sectionKey] as $groupKey => $fields)
-                    <div>
-                        @if ($groupKey !== '')
-                            <h3 class="mb-3 border-l-4 border-emerald-500 pl-2 text-sm font-semibold text-slate-700">{{ $groups[$groupKey] }}</h3>
-                        @endif
-
-                        <dl class="grid gap-x-6 gap-y-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
-                            @foreach ($fields as $name => $field)
-                                {{-- A follow-up its answer did not ask, e.g. 郵送していない明細の扱い when all are mailed. --}}
-                                @continue(! $response->asks($name))
-                                @include('responses.partials.answer-value')
-                            @endforeach
-                        </dl>
-                    </div>
-                @endforeach
+            <x-section-card :title="$sectionLabel">
+                <dl class="grid gap-x-6 gap-y-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
+                    @foreach ($fieldsBySection[$sectionKey] as $name => $field)
+                        {{-- A follow-up its answer did not ask, e.g. 郵送していない明細の扱い when all are mailed. --}}
+                        @continue(! $response->asks($name))
+                        @include('responses.partials.answer-value')
+                    @endforeach
+                </dl>
             </x-section-card>
         @endforeach
     </div>

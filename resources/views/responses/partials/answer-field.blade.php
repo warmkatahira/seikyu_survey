@@ -7,7 +7,7 @@
         'detail_unmailed_option_ids' => 'hidden group-has-[[data-asks-detail-unmailed-option-ids]:checked]/form:block',
     ][$name] ?? null;
 @endphp
-<x-field :name="$name" :label="$field['label']" :hint="$field['hint'] ?? null" :note="$field['note'] ?? null"
+<x-field accent :name="$name" :label="$field['label']" :hint="$field['hint'] ?? null" :note="$field['note'] ?? null"
     :multiple="$field['type'] === 'choices'" :required="App\Models\SurveyResponse::isRequired($name)" :class="$followUpClass">
     @if ($field['type'] === 'choices')
         {{-- After a rejected submit the boxes come back as they were sent, even when none was ticked. --}}
@@ -26,14 +26,14 @@
             <div role="group" aria-label="{{ $field['label'] }}"
                 class="grid gap-2.5 {{ $wide ? 'grid-cols-[repeat(auto-fill,minmax(230px,1fr))]' : 'grid-cols-[repeat(auto-fill,minmax(140px,1fr))]' }}">
                 @foreach ($options as $option)
-                    <label class="group/tile relative flex min-h-12 cursor-pointer items-center rounded-xl border-[1.5px] border-slate-200 bg-white py-2.5 pr-10 pl-3.5 text-sm text-slate-800 transition select-none hover:border-emerald-200 has-checked:-translate-y-px has-checked:border-emerald-600 has-checked:bg-emerald-50 has-checked:text-emerald-900 has-checked:shadow-[0_6px_16px_rgba(5,150,105,0.18)] has-focus-visible:ring-2 has-focus-visible:ring-emerald-500 has-focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:has-checked:translate-y-0">
+                    <label class="group/tile relative flex min-h-12 cursor-pointer items-center rounded-xl border-[1.5px] border-slate-200 bg-white py-2.5 pr-10 pl-3.5 text-sm text-slate-800 transition select-none hover:border-orange-200 has-checked:-translate-y-px has-checked:border-orange-600 has-checked:bg-orange-50 has-checked:text-orange-900 has-checked:shadow-[0_6px_16px_rgba(234,88,12,0.18)] has-focus-visible:ring-2 has-focus-visible:ring-orange-500 has-focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:has-checked:translate-y-0">
                         <input type="checkbox" name="{{ $name }}[]" value="{{ $option->id }}" autocomplete="off"
                             @checked(in_array($option->id, $checkedIds, true))
                             @if ($option->value === 'other') data-other @endif
                             class="sr-only">
                         {{ $option->label }}{{ $option->is_active ? '' : '（無効）' }}
                         <span aria-hidden="true"
-                            class="absolute top-1/2 right-3 grid size-[18px] -translate-y-1/2 place-items-center rounded-md border-[1.5px] border-slate-300 bg-white transition group-has-checked/tile:border-emerald-600 group-has-checked/tile:bg-emerald-600 motion-reduce:transition-none">
+                            class="absolute top-1/2 right-3 grid size-[18px] -translate-y-1/2 place-items-center rounded-md border-[1.5px] border-slate-300 bg-white transition group-has-checked/tile:border-orange-600 group-has-checked/tile:bg-orange-600 motion-reduce:transition-none">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
                                 class="size-3 text-white opacity-0 transition group-has-checked/tile:opacity-100 motion-reduce:transition-none">
                                 <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z" clip-rule="evenodd" />
@@ -67,7 +67,7 @@
             <div role="radiogroup" aria-label="{{ $field['label'] }}"
                 class="grid gap-2.5 {{ $wide ? 'grid-cols-[repeat(auto-fill,minmax(230px,1fr))]' : 'grid-cols-[repeat(auto-fill,minmax(140px,1fr))]' }}">
                 @foreach ($options as $option)
-                    <label class="group/tile relative flex min-h-12 cursor-pointer items-center rounded-xl border-[1.5px] border-slate-200 bg-white py-2.5 pr-10 pl-3.5 text-sm text-slate-800 transition select-none hover:border-emerald-200 has-checked:-translate-y-px has-checked:border-emerald-600 has-checked:bg-emerald-50 has-checked:text-emerald-900 has-checked:shadow-[0_6px_16px_rgba(5,150,105,0.18)] has-focus-visible:ring-2 has-focus-visible:ring-emerald-500 has-focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:has-checked:translate-y-0">
+                    <label class="group/tile relative flex min-h-12 cursor-pointer items-center rounded-xl border-[1.5px] border-slate-200 bg-white py-2.5 pr-10 pl-3.5 text-sm text-slate-800 transition select-none hover:border-orange-200 has-checked:-translate-y-px has-checked:border-orange-600 has-checked:bg-orange-50 has-checked:text-orange-900 has-checked:shadow-[0_6px_16px_rgba(234,88,12,0.18)] has-focus-visible:ring-2 has-focus-visible:ring-orange-500 has-focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:has-checked:translate-y-0">
                         <input type="radio" name="{{ $name }}" value="{{ $option->id }}" autocomplete="off"
                             @checked($chosenId === $option->id)
                             @if ($option->value === App\Models\SurveyResponse::COVER_ONLY) data-cover-only @endif
@@ -78,8 +78,8 @@
                             class="sr-only">
                         {{ $option->label }}{{ $option->is_active ? '' : '（無効）' }}
                         <span aria-hidden="true"
-                            class="absolute top-1/2 right-3 grid size-[18px] -translate-y-1/2 place-items-center rounded-full border-[1.5px] border-slate-300 bg-white transition group-has-checked/tile:border-emerald-600 motion-reduce:transition-none">
-                            <span class="size-2 scale-0 rounded-full bg-emerald-600 transition group-has-checked/tile:scale-100 motion-reduce:transition-none"></span>
+                            class="absolute top-1/2 right-3 grid size-[18px] -translate-y-1/2 place-items-center rounded-full border-[1.5px] border-slate-300 bg-white transition group-has-checked/tile:border-orange-600 motion-reduce:transition-none">
+                            <span class="size-2 scale-0 rounded-full bg-orange-600 transition group-has-checked/tile:scale-100 motion-reduce:transition-none"></span>
                         </span>
                     </label>
                 @endforeach
@@ -102,8 +102,11 @@
             @endif
         </div>
     @elseif ($field['type'] === 'number')
-        <x-text-input :name="$name" type="number" :value="$response->{$name}" min="0" max="9999"
-            placeholder="例：45" class="sm:max-w-40" />
+        <div class="flex items-center gap-2">
+            <x-text-input :name="$name" type="number" :value="$response->{$name}" min="0" max="9999"
+                placeholder="例：45" class="max-w-40" />
+            <span class="text-sm text-slate-700">分</span>
+        </div>
     @else
         <textarea name="{{ $name }}" id="{{ $name }}" rows="4" autocomplete="off"
             class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
