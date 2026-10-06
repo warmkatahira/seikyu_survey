@@ -82,7 +82,7 @@ class SurveyResponseController extends Controller
     public function store(SurveyResponseRequest $request): RedirectResponse|JsonResponse
     {
         $response = DB::transaction(function () use ($request): SurveyResponse {
-            $answers = SurveyResponse::withoutDetailIfCoverOnly(SurveyResponse::withoutStrayOtherText($request->validated()));
+            $answers = SurveyResponse::withoutUnaskedFollowUps(SurveyResponse::withoutDetailIfCoverOnly(SurveyResponse::withoutStrayOtherText($request->validated())));
             $response = SurveyResponse::create(Arr::except($answers, SurveyResponse::choiceInputNames()));
             $response->syncChoices($answers);
 
@@ -118,7 +118,7 @@ class SurveyResponseController extends Controller
     public function update(SurveyResponseRequest $request, SurveyResponse $response): RedirectResponse|JsonResponse
     {
         DB::transaction(function () use ($request, $response): void {
-            $answers = SurveyResponse::withoutDetailIfCoverOnly(SurveyResponse::withoutStrayOtherText($request->validated()));
+            $answers = SurveyResponse::withoutUnaskedFollowUps(SurveyResponse::withoutDetailIfCoverOnly(SurveyResponse::withoutStrayOtherText($request->validated())));
             $response->update(Arr::except($answers, SurveyResponse::choiceInputNames()));
             $response->syncChoices($answers);
         });

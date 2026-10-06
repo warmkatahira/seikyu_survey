@@ -63,6 +63,16 @@ class ChoiceSeeder extends Seeder
                 'partly' => '一部郵送している',
             ],
         ],
+        'detail_unmailed' => [
+            'name' => '郵送していない明細の扱い',
+            'description' => '「明細の郵送」で「全て郵送していない」「一部郵送している」を選んだ場合に使用します（複数選択）。',
+            'options' => [
+                'email' => 'メールで送付',
+                'fax_or_hand' => 'FAX・手渡し',
+                'not_sent' => '送付していない',
+                'other' => 'その他',
+            ],
+        ],
         'data_source' => [
             'name' => '実績データの出どころ',
             'description' => '請求金額（数量）の根拠となるデータの入手元。鑑・明細それぞれで使用します（複数選択）。',

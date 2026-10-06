@@ -29,12 +29,12 @@ class SurveyResponseRequest extends FormRequest
         }
 
         foreach (SurveyResponse::choiceFields() as $field => $definition) {
-            $rules[$field] = [...$this->presence($field, $catalog), Rule::in($catalog->optionIds($definition['category']))];
+            $rules[$field] = [...$this->presence($field, $catalog), Rule::in($catalog->optionIds($definition['category'], $definition['except'] ?? []))];
         }
 
         foreach (SurveyResponse::multiChoiceFields() as $field => $definition) {
             $rules[$field] = [...$this->presence($field, $catalog), 'array'];
-            $rules["{$field}.*"] = ['distinct', Rule::in($catalog->optionIds($definition['category']))];
+            $rules["{$field}.*"] = ['distinct', Rule::in($catalog->optionIds($definition['category'], $definition['except'] ?? []))];
         }
 
         foreach ($this->otherFields() as $field => $definition) {
@@ -73,7 +73,8 @@ class SurveyResponseRequest extends FormRequest
 
     /**
      * The presence rules of a question: `required` for a required one (a 明細 one only while
-     * 明細について is asked), and `nullable` for one that may be left blank.
+     * 明細について is asked, a follow-up only while it is asked), and `nullable` for one that
+     * may be left blank.
      *
      * @return list<mixed>
      */
@@ -83,9 +84,24 @@ class SurveyResponseRequest extends FormRequest
             return ['nullable'];
         }
 
-        return SurveyResponse::FIELDS[$field]['section'] === 'detail'
-            ? [Rule::requiredIf(fn (): bool => ! $this->isCoverOnly($catalog)), 'nullable']
-            : ['required'];
+        if (SurveyResponse::FIELDS[$field]['section'] !== 'detail' && ! isset(SurveyResponse::FIELDS[$field]['asked_if'])) {
+            return ['required'];
+        }
+
+        return [Rule::requiredIf(fn (): bool => $this->isAsked($field, $catalog)), 'nullable'];
+    }
+
+    /**
+     * Whether a question is asked of this answer: not a 明細 one under 鑑のみ, nor a follow-up
+     * whose answer it hangs on does not ask it.
+     */
+    private function isAsked(string $field, ChoiceCatalog $catalog): bool
+    {
+        if (SurveyResponse::FIELDS[$field]['section'] === 'detail' && $this->isCoverOnly($catalog)) {
+            return false;
+        }
+
+        return SurveyResponse::askedGiven($field, $this->all());
     }
 
     /**
@@ -99,14 +115,15 @@ class SurveyResponseRequest extends FormRequest
     }
 
     /**
-     * Whether その他 was chosen in a field, so what it is must be said. A 明細 question does not
-     * count while 請求書の構成 is 鑑のみ, as its answers are thrown away on save.
+     * Whether その他 was chosen in a field, so what it is must be said. A question not asked
+     * (a 明細 one under 鑑のみ, a follow-up not asked) does not count, as its answers are thrown
+     * away on save.
      *
      * @param  array{section: string, type: string, category: string}  $definition
      */
     private function choseOther(string $field, array $definition, ChoiceCatalog $catalog): bool
     {
-        if ($definition['section'] === 'detail' && $this->isCoverOnly($catalog)) {
+        if (! $this->isAsked($field, $catalog)) {
             return false;
         }
 

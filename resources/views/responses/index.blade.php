@@ -39,7 +39,7 @@
                     class="w-72 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs">
                     <option value="">すべて</option>
                     @foreach ($customers as $customer)
-                        <option value="{{ $customer->id }}" @selected($customerId === $customer->id)>{{ $customer->code }}：{{ $customer->name }}</option>
+                        <option value="{{ $customer->id }}" @selected($customerId === $customer->id)>{{ $customer->name }}</option>
                     @endforeach
                 </select>
             </div>

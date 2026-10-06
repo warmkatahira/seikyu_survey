@@ -11,7 +11,8 @@ class OfficeSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * The 拠点 list from the original Excel 選択肢マスタ sheet.
+     * The 拠点 list from the original Excel 選択肢マスタ sheet (倉庫 and 広島 renamed to
+     * 倉庫管理 and 広島営業所 since).
      *
      * @var list<string>
      */
@@ -23,8 +24,8 @@ class OfficeSeeder extends Seeder
         'ロジポート',
         'ロジステーション',
         'ロジコンタクト',
-        '倉庫',
-        '広島',
+        '倉庫管理',
+        '広島営業所',
         'IMP三郷',
         'システム',
     ];

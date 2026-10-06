@@ -1,6 +1,14 @@
 {{-- One answer's input, chosen by its type in SurveyResponse::FIELDS. --}}
+@php
+    // A follow-up (`asked_if`) shows only while an option asking it is chosen (CSS only, via
+    // group-has on the options' data-asks-{field, hyphenated}). Tailwind needs each class written
+    // out in full, and reads `_` as a space, so a new follow-up gets a hyphenated line here.
+    $followUpClass = [
+        'detail_unmailed_option_ids' => 'hidden group-has-[[data-asks-detail-unmailed-option-ids]:checked]/form:block',
+    ][$name] ?? null;
+@endphp
 <x-field :name="$name" :label="$field['label']" :hint="$field['hint'] ?? null" :note="$field['note'] ?? null"
-    :multiple="$field['type'] === 'choices'" :required="App\Models\SurveyResponse::isRequired($name)">
+    :multiple="$field['type'] === 'choices'" :required="App\Models\SurveyResponse::isRequired($name)" :class="$followUpClass">
     @if ($field['type'] === 'choices')
         {{-- After a rejected submit the boxes come back as they were sent, even when none was ticked. --}}
         @php
@@ -12,7 +20,7 @@
             {{-- Tiles: the real checkbox stays (visually hidden) for the keyboard and the その他 rule;
                  the corner box and the lift show the ticked state. Long option lists get wider tiles. --}}
             @php
-                $options = $catalog->optionsIncluding($field['category'], $response->{$name});
+                $options = $catalog->optionsIncluding($field['category'], $response->{$name}, $field['except'] ?? []);
                 $wide = $options->contains(fn ($option): bool => mb_strlen($option->label) > 8);
             @endphp
             <div role="group" aria-label="{{ $field['label'] }}"
@@ -50,7 +58,7 @@
              empty hidden input is sent when nothing is chosen, so clearing an answer saves as
              未回答; a chosen radio comes later under the same name and wins. --}}
         @php
-            $options = $catalog->optionsIncluding($field['category'], $response->{$name});
+            $options = $catalog->optionsIncluding($field['category'], $response->{$name}, $field['except'] ?? []);
             $wide = $options->contains(fn ($option): bool => mb_strlen($option->label) > 8);
             $chosenId = (int) old($name, $response->{$name});
         @endphp
@@ -63,6 +71,9 @@
                         <input type="radio" name="{{ $name }}" value="{{ $option->id }}" autocomplete="off"
                             @checked($chosenId === $option->id)
                             @if ($option->value === App\Models\SurveyResponse::COVER_ONLY) data-cover-only @endif
+                            @foreach (App\Models\SurveyResponse::followUpsAskedBy($name, $option->value) as $followUp)
+                                data-asks-{{ str_replace('_', '-', $followUp) }}
+                            @endforeach
                             @if (($field['other'] ?? false) && $option->value === 'other') data-other @endif
                             class="sr-only">
                         {{ $option->label }}{{ $option->is_active ? '' : '（無効）' }}

@@ -181,7 +181,9 @@ class SurveyResponseTest extends TestCase
         $this->actingAs($this->respondent())
             ->get(route('responses.index', ['customer_id' => $wanted->customer_id]))
             ->assertOk()
-            ->assertViewHas('responses', fn ($responses) => $responses->pluck('id')->all() === [$wanted->id]);
+            ->assertViewHas('responses', fn ($responses) => $responses->pluck('id')->all() === [$wanted->id])
+            ->assertSee('株式会社ＢＢＢＢ')
+            ->assertDontSee('2222：');
     }
 
     public function test_the_list_shows_when_each_answer_was_given_and_last_updated(): void
@@ -369,6 +371,76 @@ class SurveyResponseTest extends TestCase
         $this->assertSame([$this->option('data_source', 'wms')], $answer->detail_data_source_option_ids);
     }
 
+    public function test_made_from_the_detail_is_offered_as_a_data_source_for_the_cover_only(): void
+    {
+        $fromDetail = $this->option('data_source', 'from_detail');
+
+        $form = $this->actingAs($this->respondent())->get(route('responses.create'))->getContent();
+        $this->assertStringContainsString('name="data_source_option_ids[]" value="'.$fromDetail.'"', $form);
+        $this->assertStringNotContainsString('name="detail_data_source_option_ids[]" value="'.$fromDetail.'"', $form);
+
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), $this->answer(['detail_data_source_option_ids' => [$fromDetail]]))
+            ->assertSessionHasErrors('detail_data_source_option_ids.0');
+    }
+
+    public function test_how_unmailed_details_reach_the_customer_is_asked_only_when_some_are_not_mailed(): void
+    {
+        $base = [
+            'employee_id' => Employee::factory()->create()->id,
+            'customer_id' => Customer::factory()->create()->id,
+            'office_id' => Office::factory()->create()->id,
+        ];
+
+        // The question sits right after 明細の郵送 and is revealed by 全て郵送していない／一部郵送している only.
+        $form = $this->actingAs($this->respondent())->get(route('responses.create'));
+        $form->assertSeeInOrder(['明細の郵送', '郵送していない明細の扱い', 'メールで送付', 'FAX・手渡し', '送付していない', 'その他']);
+        foreach (['none' => true, 'partly' => true, 'all' => false] as $value => $asks) {
+            $pattern = '/value="'.$this->option('detail_mailing', $value).'"[^>]*data-asks-detail-unmailed-option-ids/';
+            $asks
+                ? $this->assertMatchesRegularExpression($pattern, $form->getContent())
+                : $this->assertDoesNotMatchRegularExpression($pattern, $form->getContent());
+        }
+
+        // Required while asked.
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), $this->answer($base + [
+                'detail_mailing_option_id' => $this->option('detail_mailing', 'partly'),
+                'detail_unmailed_option_ids' => [],
+            ]))
+            ->assertSessionHasErrors('detail_unmailed_option_ids');
+
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), $this->answer($base + [
+                'detail_mailing_option_id' => $this->option('detail_mailing', 'partly'),
+                'detail_unmailed_option_ids' => [$this->option('detail_unmailed', 'email'), $this->option('detail_unmailed', 'other')],
+                'detail_unmailed_option_ids_other' => '顧客の共有フォルダに保存',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $answer = SurveyResponse::query()->sole();
+        $this->assertSame([$this->option('detail_unmailed', 'email'), $this->option('detail_unmailed', 'other')], $answer->detail_unmailed_option_ids);
+        $this->actingAs($this->respondent())
+            ->get(route('responses.show', $answer))
+            ->assertSeeInOrder(['郵送していない明細の扱い', 'メールで送付、その他（顧客の共有フォルダに保存）']);
+
+        // Switched to 全て郵送している, it is not required and what was ticked before is dropped.
+        $this->actingAs($this->respondent())
+            ->put(route('responses.update', $answer), $this->answer($base + [
+                'detail_mailing_option_id' => $this->option('detail_mailing', 'all'),
+                'detail_unmailed_option_ids' => [$this->option('detail_unmailed', 'other')],
+                'detail_unmailed_option_ids_other' => '',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $answer->refresh();
+        $this->assertSame([], $answer->detail_unmailed_option_ids);
+        $this->assertDatabaseMissing('survey_response_choices', ['field' => 'detail_unmailed_option_ids']);
+        $this->actingAs($this->respondent())
+            ->get(route('responses.show', $answer))
+            ->assertDontSee('郵送していない明細の扱い');
+    }
+
     public function test_a_cover_only_invoice_keeps_no_detail_answers(): void
     {
         $this->actingAs($this->respondent())
@@ -484,10 +556,15 @@ class SurveyResponseTest extends TestCase
             $form->assertSee('data-field-label="'.SurveyResponse::FIELDS[$field]['label'].'"', false);
         }
 
-        // Sent with nothing answered, every one of them is rejected, and nothing else is.
+        // Sent with nothing answered, every one of them is rejected, and nothing else is. A
+        // follow-up is not asked until the answer it hangs on asks it.
+        $followUps = array_keys(array_filter(SurveyResponse::FIELDS, fn (array $field): bool => isset($field['asked_if'])));
+        $this->assertNotEmpty($followUps);
+
         $this->actingAs($this->respondent())
             ->post(route('responses.store'), [])
-            ->assertSessionHasErrors([...$fixed, ...$required])
+            ->assertSessionHasErrors([...$fixed, ...array_diff($required, $followUps)])
+            ->assertSessionDoesntHaveErrors($followUps)
             ->assertSessionDoesntHaveErrors(['billing_category', 'notes']);
 
         // Under 鑑のみ the 明細 questions are not asked, so they are not required either.
@@ -568,6 +645,28 @@ class SurveyResponseTest extends TestCase
             ->assertDontSee('1111：');
     }
 
+    public function test_the_edit_form_comes_back_with_every_saved_answer_chosen(): void
+    {
+        $answers = $this->answer([
+            'employee_id' => Employee::factory()->create()->id,
+            'customer_id' => Customer::factory()->create()->id,
+            'office_id' => Office::factory()->create()->id,
+        ]);
+
+        $this->actingAs($this->respondent())->post(route('responses.store'), $answers)->assertSessionHasNoErrors();
+
+        $form = $this->get(route('responses.edit', SurveyResponse::query()->sole()))->assertOk()->getContent();
+
+        foreach (array_keys(SurveyResponse::choiceFields()) as $field) {
+            $this->assertMatchesRegularExpression("/name=\"{$field}\" value=\"{$answers[$field]}\"[^>]*checked/", $form, $field);
+        }
+        foreach (array_keys(SurveyResponse::multiChoiceFields()) as $field) {
+            foreach ($answers[$field] as $id) {
+                $this->assertMatchesRegularExpression("/name=\"{$field}\[\]\" value=\"{$id}\"[^>]*checked/", $form, $field);
+            }
+        }
+    }
+
     private function respondent(): User
     {
         return User::factory()->create(['role' => User::ROLE_RESPONDENT]);
@@ -590,6 +689,7 @@ class SurveyResponseTest extends TestCase
             'detail_item_ids' => [$this->option('billing_item', 'storage')],
             'detail_format_option_ids' => [$this->option('detail_format', 'excel_own')],
             'detail_mailing_option_id' => $this->option('detail_mailing', 'none'),
+            'detail_unmailed_option_ids' => [$this->option('detail_unmailed', 'email')],
             'detail_data_source_option_ids' => [$this->option('data_source', 'wms')],
             'detail_record_timing_option_id' => $this->option('record_timing', 'daily'),
             'detail_creation_minutes' => 10,

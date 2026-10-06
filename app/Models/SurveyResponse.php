@@ -98,7 +98,14 @@ class SurveyResponse extends Model
      * least one tick) unless marked `optional`; a 明細 question only while it is asked, i.e.
      * unless 請求書の構成 is 鑑のみ. See isRequired().
      *
-     * @var array<string, array{section: string, group?: string, label: string, type: string, category?: string, hint?: string, note?: string, optional?: bool}>
+     * `except` lists option values of the shared list this question does not offer, e.g.
+     * 作成した明細から参照 is a 鑑 data source only.
+     *
+     * `asked_if` makes a follow-up question: [the one-answer field it hangs on, the option values
+     * of that field it is asked for]. It shows, is required and is kept only while one of those
+     * is chosen. See askedGiven().
+     *
+     * @var array<string, array{section: string, group?: string, label: string, type: string, category?: string, hint?: string, note?: string, optional?: bool, except?: list<string>, asked_if?: array{string, list<string>}}>
      */
     public const FIELDS = [
         'invoice_composition_option_id' => [
@@ -166,12 +173,21 @@ class SurveyResponse extends Model
             'category' => 'detail_mailing',
             'hint' => '明細を紙に印刷して、お客様に郵送しているかをお答えください。',
         ],
+        'detail_unmailed_option_ids' => [
+            'section' => 'detail',
+            'label' => '郵送していない明細の扱い',
+            'type' => 'choices',
+            'category' => 'detail_unmailed',
+            'hint' => '郵送していない明細を、お客様へどのように渡しているかをお答えください。当てはまるものをすべてチェックしてください。',
+            'asked_if' => ['detail_mailing_option_id', ['none', 'partly']],
+        ],
         'detail_data_source_option_ids' => [
             'section' => 'detail',
             'group' => 'data_source',
             'label' => '実績データの出どころ',
             'type' => 'choices',
             'category' => 'data_source',
+            'except' => ['from_detail'],
             'hint' => '明細に載せる数量の根拠となるデータを、どこから持ってきているかをお答えください。使っているものをすべてチェックしてください。',
         ],
         'detail_record_timing_option_id' => [
@@ -332,6 +348,72 @@ class SurveyResponse extends Model
 
         foreach (self::FIELDS as $field => $definition) {
             if ($definition['section'] !== 'detail') {
+                continue;
+            }
+
+            $answers[$field] = $definition['type'] === 'choices' ? [] : null;
+
+            if ($definition['type'] === 'choices' || ($definition['other'] ?? false)) {
+                $answers[self::otherInputName($field)] = null;
+            }
+        }
+
+        return $answers;
+    }
+
+    /**
+     * Whether a question is asked given the answers so far: always, unless it is a follow-up
+     * (`asked_if`) whose answer it hangs on is not one of the options it is asked for.
+     *
+     * @param  array<string, mixed>  $answers  input or attributes, keyed by field name
+     */
+    public static function askedGiven(string $field, array $answers): bool
+    {
+        if (! isset(self::FIELDS[$field]['asked_if'])) {
+            return true;
+        }
+
+        [$parent, $values] = self::FIELDS[$field]['asked_if'];
+        $optionId = $answers[$parent] ?? null;
+
+        return in_array(app(ChoiceCatalog::class)->value(filled($optionId) ? (int) $optionId : null), $values, true);
+    }
+
+    /**
+     * The follow-up questions an option of a one-answer field asks, e.g. 明細の郵送's
+     * 一部郵送している asks 郵送していない明細の扱い.
+     *
+     * @return list<string>
+     */
+    public static function followUpsAskedBy(string $field, ?string $value): array
+    {
+        return array_keys(array_filter(
+            self::FIELDS,
+            fn (array $definition): bool => isset($definition['asked_if'])
+                && $definition['asked_if'][0] === $field
+                && in_array($value, $definition['asked_if'][1], true),
+        ));
+    }
+
+    /**
+     * Whether this answer was asked a question (see askedGiven()).
+     */
+    public function asks(string $field): bool
+    {
+        return self::askedGiven($field, $this->getAttributes());
+    }
+
+    /**
+     * The answers with every follow-up question that was not asked emptied, so one filled in
+     * before its answer was changed is not kept.
+     *
+     * @param  array<string, mixed>  $answers  validated input
+     * @return array<string, mixed>
+     */
+    public static function withoutUnaskedFollowUps(array $answers): array
+    {
+        foreach (self::FIELDS as $field => $definition) {
+            if (self::askedGiven($field, $answers)) {
                 continue;
             }
 
@@ -530,6 +612,14 @@ class SurveyResponse extends Model
     protected function detailItemIds(): Attribute
     {
         return Attribute::get(fn (): array => $this->selectedChoiceIds('detail_item_ids'));
+    }
+
+    /**
+     * @return Attribute<list<int>, never>
+     */
+    protected function detailUnmailedOptionIds(): Attribute
+    {
+        return Attribute::get(fn (): array => $this->selectedChoiceIds('detail_unmailed_option_ids'));
     }
 
     /**

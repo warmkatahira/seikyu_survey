@@ -55,6 +55,8 @@
 
                         <dl class="grid gap-x-6 gap-y-4 {{ $sectionKey === 'free_text' ? '' : 'sm:grid-cols-2' }}">
                             @foreach ($fields as $name => $field)
+                                {{-- A follow-up its answer did not ask, e.g. 郵送していない明細の扱い when all are mailed. --}}
+                                @continue(! $response->asks($name))
                                 @include('responses.partials.answer-value')
                             @endforeach
                         </dl>

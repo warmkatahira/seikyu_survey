@@ -36,16 +36,20 @@ class ChoiceCatalog
     /**
      * Active options plus those currently selected, so an answer that points at a
      * deactivated option keeps showing it instead of silently resetting to blank.
+     * Options whose value is in $except are left out unless selected, for a question that
+     * shares a list but does not offer all of it.
      *
      * @param  int|list<int>|null  $selected  one id, or several for a multi-select
+     * @param  list<string>  $except  option values this question does not offer
      * @return Collection<int, ChoiceOption>
      */
-    public function optionsIncluding(string $categoryKey, int|array|null $selected): Collection
+    public function optionsIncluding(string $categoryKey, int|array|null $selected, array $except = []): Collection
     {
         $selectedIds = array_map(intval(...), (array) $selected);
 
         return $this->grouped()->get($categoryKey, new Collection)
-            ->filter(fn (ChoiceOption $option): bool => $option->is_active || in_array($option->id, $selectedIds, true))
+            ->filter(fn (ChoiceOption $option): bool => in_array($option->id, $selectedIds, true)
+                || ($option->is_active && ! in_array($option->value, $except, true)))
             ->values();
     }
 
@@ -78,14 +82,18 @@ class ChoiceCatalog
     }
 
     /**
-     * Ids of every option in a category, used to validate submitted answers.
+     * Ids of every option in a category, used to validate submitted answers, less those whose
+     * value is in $except.
      *
+     * @param  list<string>  $except  option values the question does not offer
      * @return list<int>
      */
-    public function optionIds(string $categoryKey): array
+    public function optionIds(string $categoryKey, array $except = []): array
     {
         return $this->grouped()->get($categoryKey, new Collection)
+            ->reject(fn (ChoiceOption $option): bool => in_array($option->value, $except, true))
             ->pluck('id')
+            ->values()
             ->all();
     }
 

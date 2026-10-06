@@ -15,6 +15,25 @@
         @method('PUT')
     @endif
 
+    {{-- Progress on the required questions, pinned to the top while scrolling: 「必須項目 12 / 16 回答済み」
+         and a bar. 「あと◯件」 jumps to the first unanswered one. Hidden questions (明細について under
+         鑑のみ) are left out of both counts. Filled in by the script below. --}}
+    <div data-required-progress aria-live="polite"
+        class="sticky top-[env(safe-area-inset-top,0px)] z-30 rounded-lg border border-slate-200 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur">
+        <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+            <span class="text-slate-700">
+                必須項目 <strong class="text-base text-slate-900 tabular-nums" data-required-answered></strong>
+                / <span class="tabular-nums" data-required-total></span> 回答済み
+            </span>
+            <button type="button" data-required-jump
+                class="text-xs font-medium underline-offset-2 not-data-done:text-rose-700 not-data-done:hover:underline data-done:cursor-default data-done:text-emerald-700"></button>
+        </div>
+        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+            <div data-required-fill
+                class="h-full w-0 rounded-full bg-linear-to-r from-emerald-600 to-emerald-400 transition-[width] duration-300 motion-reduce:transition-none"></div>
+        </div>
+    </div>
+
     {{-- One question per row, so a question with a hint box never pushes its neighbour's input out of line. --}}
     <x-section-card :title="$sections['basic']">
         <div class="grid gap-5">
@@ -96,14 +115,6 @@
             </x-section-card>
         </div>
     @endforeach
-
-    {{-- How many required questions are still unanswered, kept up to date as the form is filled in.
-         Clicking it jumps to the first one. Hidden questions (明細について under 鑑のみ) are not counted. --}}
-    <button type="button" data-required-counter aria-live="polite"
-        class="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-30 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-lg transition motion-reduce:transition-none data-done:border-emerald-200 data-done:bg-emerald-50 data-done:text-emerald-800 not-data-done:border-rose-200 not-data-done:bg-white not-data-done:text-rose-700 not-data-done:hover:bg-rose-50">
-        <span class="grid size-5 place-items-center rounded-full text-xs font-semibold text-white not-data-done:bg-rose-500 data-done:bg-emerald-600" data-required-count></span>
-        <span data-required-text></span>
-    </button>
 
     <div class="flex flex-wrap items-center gap-3">
         {{-- Styled as "send": a filled accent pill with a paper-plane, distinct from the grey utility buttons. --}}
@@ -204,14 +215,16 @@
             }
         });
 
-        // 「必須項目 あと◯件」: a required question counts as answered once a tile is chosen, or its
+        // Required-question progress: a question counts as answered once a tile is chosen, or its
         // dropdown / text / number has a value. Questions hidden at the moment are skipped.
         (() => {
-            const counter = document.querySelector('[data-required-counter]');
+            const progress = document.querySelector('[data-required-progress]');
 
-            if (! counter) {
+            if (! progress) {
                 return;
             }
+
+            const jump = progress.querySelector('[data-required-jump]');
 
             const isAnswered = (field) => {
                 const picks = field.querySelectorAll('input[type=radio], input[type=checkbox]');
@@ -225,22 +238,24 @@
                 return control !== null && control.value.trim() !== '';
             };
 
-            const unanswered = () => Array.from(document.querySelectorAll('[data-required-field]'))
-                .filter((field) => field.offsetParent !== null && ! isAnswered(field));
+            const visibleFields = () => Array.from(document.querySelectorAll('[data-required-field]'))
+                .filter((field) => field.offsetParent !== null);
 
             const refresh = () => {
-                const left = unanswered().length;
+                const fields = visibleFields();
+                const answered = fields.filter(isAnswered).length;
+                const left = fields.length - answered;
 
-                counter.toggleAttribute('data-done', left === 0);
-                counter.querySelector('[data-required-count]').textContent = left === 0 ? '✓' : left;
-                counter.querySelector('[data-required-text]').textContent = left === 0
-                    ? '必須項目はすべて回答済み'
-                    : `必須項目 あと${left}件`;
-                counter.title = left === 0 ? '' : 'クリックすると未回答の必須項目へ移動します';
+                progress.querySelector('[data-required-answered]').textContent = answered;
+                progress.querySelector('[data-required-total]').textContent = fields.length;
+                progress.querySelector('[data-required-fill]').style.width = `${fields.length === 0 ? 100 : (answered / fields.length) * 100}%`;
+                jump.toggleAttribute('data-done', left === 0);
+                jump.textContent = left === 0 ? 'すべて回答済み ✓' : `あと${left}件 →`;
+                jump.title = left === 0 ? '' : '未回答の必須項目へ移動します';
             };
 
-            counter.addEventListener('click', () => {
-                const field = unanswered()[0];
+            jump.addEventListener('click', () => {
+                const field = visibleFields().find((candidate) => ! isAnswered(candidate));
 
                 if (field) {
                     field.scrollIntoView({ behavior: 'smooth', block: 'center' });

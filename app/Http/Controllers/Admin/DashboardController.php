@@ -34,6 +34,7 @@ class DashboardController extends Controller
             // Each breakdown: its count columns' headings, and a row per option with one count per column.
             'breakdowns' => [
                 '作成している明細（複数選択）' => [['件数'], $this->tickedCounts(['detail_item_ids'], $catalog)],
+                '郵送していない明細の扱い（複数選択）' => [['件数'], $this->tickedCounts(['detail_unmailed_option_ids'], $catalog)],
                 '現状使用しているツール（複数選択）' => [['件数'], $this->tickedCounts(['tool_option_ids'], $catalog)],
                 '実績データの出どころ（複数選択）' => [self::COVER_AND_DETAIL, $this->tickedCounts(['data_source_option_ids', 'detail_data_source_option_ids'], $catalog)],
                 '自分以外に作成できる人' => [['件数'], $this->singleCounts('dependency_option_id', $catalog)],
