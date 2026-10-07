@@ -37,7 +37,7 @@ class UserSeeder extends Seeder
             [
                 'name' => '回答用アカウント',
                 'role' => User::ROLE_RESPONDENT,
-                'password' => Hash::make('password'),
+                'password' => Hash::make('warm_seikyu_kaitou'),
             ],
         );
     }
