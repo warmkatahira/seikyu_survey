@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->string('code', 50)->unique();
             $table->string('name');
-            $table->foreignId('office_id')->nullable()->constrained()->nullOnDelete();
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
