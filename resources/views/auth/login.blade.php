@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-{{-- 案C: a soft orange backdrop (blurred glows over faint ledger lines, see .login-backdrop in
+{{-- 案C: a soft teal backdrop (blurred glows over faint ledger lines, see .login-backdrop in
      app.css) with a slightly see-through card on top. --}}
 <body class="login-backdrop flex min-h-screen items-center justify-center px-4 py-10 text-slate-900">
     <form method="POST" action="{{ route('login') }}"
@@ -23,7 +23,7 @@
             <img src="/favicon.svg" alt="" class="size-11 flex-none">
             <div>
                 <h1 class="text-base font-semibold">請求書作成　実態調査</h1>
-                <p class="text-xs text-orange-800">配布されたアカウントでログインしてください。</p>
+                <p class="text-xs text-teal-800">配布されたアカウントでログインしてください。</p>
             </div>
         </div>
 
@@ -42,17 +42,17 @@
         <x-field name="login_id" label="ログインID" required>
             <x-text-input name="login_id" :value="$devCredentials['login_id'] ?? null"
                 autocomplete="username" autocapitalize="none" spellcheck="false" autofocus required
-                class="rounded-lg! focus:border-orange-500! focus:ring-orange-500! focus:outline-hidden" />
+                class="rounded-lg! focus:border-teal-500! focus:ring-teal-500! focus:outline-hidden" />
         </x-field>
 
         <x-field name="password" label="パスワード" required>
             <x-text-input name="password" type="password" :value="$devCredentials['password'] ?? null"
                 autocomplete="current-password" required
-                class="rounded-lg! focus:border-orange-500! focus:ring-orange-500! focus:outline-hidden" />
+                class="rounded-lg! focus:border-teal-500! focus:ring-teal-500! focus:outline-hidden" />
         </x-field>
 
         <button type="submit"
-            class="w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white shadow-md shadow-orange-600/25 transition hover:bg-orange-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600">
+            class="w-full rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-md shadow-teal-600/25 transition hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600">
             ログイン
         </button>
     </form>

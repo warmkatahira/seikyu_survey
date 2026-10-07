@@ -3,7 +3,7 @@
 
     <div class="mb-4 flex justify-end">
         <a href="{{ route('admin.offices.create') }}"
-            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">＋ 営業所を追加</a>
+            class="rounded-md bg-teal-900 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800">＋ 営業所を追加</a>
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">

@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
+<body class="min-h-screen bg-[#eef3f3] text-slate-900">
     <header class="border-b border-slate-200 bg-white">
         <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
             <a href="{{ route('responses.index') }}" class="text-base font-semibold text-slate-900">

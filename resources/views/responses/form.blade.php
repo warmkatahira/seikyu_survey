@@ -29,7 +29,7 @@
         </div>
         <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
             <div data-required-fill
-                class="relative h-full w-0 overflow-hidden rounded-full bg-linear-to-r from-orange-600 to-orange-400 transition-[width] duration-300 motion-reduce:transition-none"></div>
+                class="relative h-full w-0 overflow-hidden rounded-full bg-linear-to-r from-teal-600 to-teal-400 transition-[width] duration-300 motion-reduce:transition-none"></div>
         </div>
     </div>
 
@@ -110,7 +110,7 @@
     <div class="flex flex-wrap items-center gap-3">
         {{-- Styled as "send": a filled accent pill with a paper-plane, distinct from the grey utility buttons. --}}
         <button type="submit" data-send-button
-            class="send-button group inline-flex items-center gap-2 rounded-full bg-orange-600 px-7 py-2.5 text-sm font-semibold tracking-wide text-white shadow-md shadow-orange-600/25 transition hover:bg-orange-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 active:translate-y-px">
+            class="send-button group inline-flex items-center gap-2 rounded-full bg-teal-600 px-7 py-2.5 text-sm font-semibold tracking-wide text-white shadow-md shadow-teal-600/25 transition hover:bg-teal-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 active:translate-y-px">
             <span data-send-label>{{ $response->exists ? '更新する' : '回答する' }}</span>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="send-plane size-4 transition group-hover:translate-x-0.5" aria-hidden="true">
                 <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />

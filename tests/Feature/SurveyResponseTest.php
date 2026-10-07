@@ -343,7 +343,7 @@ class SurveyResponseTest extends TestCase
             // No sub-headings: each question's own title carries the accent bar.
             ->assertDontSee('実績データの取得方法')
             ->assertDontSee('<h3', false)
-            ->assertSee('border-l-4 border-orange-500 pl-2', false);
+            ->assertSee('border-l-4 border-teal-500 pl-2', false);
     }
 
     public function test_data_sources_are_ticked_separately_for_the_cover_and_the_detail(): void

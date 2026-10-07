@@ -67,7 +67,7 @@
         </a>
 
         <a href="{{ route('responses.create') }}"
-            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            class="rounded-md bg-teal-900 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800">
             ＋ 新しい顧客の回答を追加
         </a>
     </div>
@@ -88,7 +88,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($responses as $response)
-                    <tr class="cursor-pointer transition-colors hover:bg-orange-100" data-href="{{ route('responses.show', $response) }}">
+                    <tr class="cursor-pointer transition-colors hover:bg-teal-100" data-href="{{ route('responses.show', $response) }}">
                         <td class="px-3 py-2 text-slate-500">{{ $loop->iteration + ($responses->firstItem() - 1) }}</td>
                         <td class="px-3 py-2">
                             <a href="{{ route('responses.show', $response) }}" class="font-medium hover:underline">{{ $response->customer?->name }}</a>

@@ -3,7 +3,7 @@
 
     <div class="mb-5 flex justify-end">
         <a href="{{ route('admin.responses.export') }}"
-            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            class="rounded-md bg-teal-900 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800">
             回答をCSVでダウンロード
         </a>
     </div>

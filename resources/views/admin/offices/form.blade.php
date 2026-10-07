@@ -27,7 +27,7 @@
         </x-section-card>
 
         <div class="flex items-center gap-3">
-            <button type="submit" class="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            <button type="submit" class="rounded-md bg-teal-900 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800">
                 {{ $office->exists ? '更新する' : '追加する' }}
             </button>
             <a href="{{ route('admin.offices.index') }}" class="text-sm text-slate-600 underline underline-offset-2">一覧に戻る</a>
