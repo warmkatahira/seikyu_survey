@@ -81,18 +81,20 @@
         </a>
     </div>
 
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    {{-- The headings stay in view while the page scrolls. A horizontally scrolling box would trap
+         the sticky row, so the table only scrolls sideways on narrow screens. --}}
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white lg:overflow-visible">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50 text-left text-xs text-slate-600">
+            <thead class="sticky top-0 z-10 bg-slate-50 text-left text-xs text-slate-600 shadow-[inset_0_-1px_0_var(--color-slate-200)]">
                 <tr>
-                    <th class="px-3 py-2 font-medium">No.</th>
+                    <th class="px-3 py-2 font-medium lg:rounded-tl-lg">No.</th>
                     <th class="px-3 py-2 font-medium">顧客</th>
                     <th class="px-3 py-2 font-medium">営業所・拠点</th>
                     <th class="px-3 py-2 font-medium">作成担当者</th>
                     <th class="px-3 py-2 font-medium whitespace-nowrap">作成時間</th>
                     <th class="px-3 py-2 font-medium whitespace-nowrap">回答日時</th>
                     <th class="px-3 py-2 font-medium whitespace-nowrap">更新日時</th>
-                    <th class="px-3 py-2"></th>
+                    <th class="px-3 py-2 lg:rounded-tr-lg"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
