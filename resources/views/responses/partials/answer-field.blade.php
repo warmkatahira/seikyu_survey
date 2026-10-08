@@ -31,6 +31,7 @@
                         <input type="checkbox" name="{{ $name }}[]" value="{{ $option->id }}" autocomplete="off"
                             @checked(in_array($option->id, $checkedIds, true))
                             @if ($option->value === 'other') data-other @endif
+                            @if ($option->value === ($field['exclusive'] ?? null)) data-exclusive @endif
                             class="sr-only">
                         {{ $option->label }}{{ $option->is_active ? '' : '（無効）' }}
                         <span aria-hidden="true"

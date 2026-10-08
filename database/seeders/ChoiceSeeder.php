@@ -115,6 +115,7 @@ class ChoiceSeeder extends Seeder
                 'yamato_freight' => '運賃算出ツール（ヤマト運輸）',
                 'dedicated' => '専用ツール',
                 'other' => 'その他',
+                'none' => '使用していない',
             ],
         ],
         'digitization_request' => [

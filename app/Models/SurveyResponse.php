@@ -91,11 +91,14 @@ class SurveyResponse extends Model
      * `except` lists option values of the shared list this question does not offer, e.g.
      * 作成した明細から参照 is a 鑑 data source only.
      *
+     * `exclusive` (multi-selects) is the value of an option that stands alone, e.g. 使用していない:
+     * ticking it clears the other ticks and vice versa, and validation rejects it with others.
+     *
      * `asked_if` makes a follow-up question: [the one-answer field it hangs on, the option values
      * of that field it is asked for]. It shows, is required and is kept only while one of those
      * is chosen. See askedGiven().
      *
-     * @var array<string, array{section: string, label: string, type: string, category?: string, hint?: string, note?: string, optional?: bool, except?: list<string>, asked_if?: array{string, list<string>}}>
+     * @var array<string, array{section: string, label: string, type: string, category?: string, hint?: string, note?: string, optional?: bool, except?: list<string>, exclusive?: string, asked_if?: array{string, list<string>}}>
      */
     public const FIELDS = [
         'invoice_composition_option_id' => [
@@ -197,6 +200,7 @@ class SurveyResponse extends Model
             'label' => '現状使用しているツールについて',
             'type' => 'choices',
             'category' => 'tool',
+            'exclusive' => 'none',
             'hint' => '請求書の作成に現在使っているツールをすべてチェックしてください。',
         ],
 

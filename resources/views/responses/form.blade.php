@@ -320,6 +320,22 @@
                 .forEach((radio) => { radio.checked = false; });
         });
 
+        // An option that stands alone (使用していない) clears the other ticks of its question, and
+        // ticking any other option clears it.
+        document.addEventListener('change', (event) => {
+            const box = event.target.closest('[data-send-form] [role=group] input[type=checkbox]');
+
+            if (! box?.checked) {
+                return;
+            }
+
+            box.closest('[role=group]').querySelectorAll('input[type=checkbox]:checked').forEach((other) => {
+                if (other !== box && (box.hasAttribute('data-exclusive') || other.hasAttribute('data-exclusive'))) {
+                    other.checked = false;
+                }
+            });
+        });
+
         // Coming back with the browser's Back button can restore the page mid-send; reset it.
         window.addEventListener('pageshow', (event) => {
             if (! event.persisted) {

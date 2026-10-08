@@ -33,7 +33,7 @@ class SurveyResponseRequest extends FormRequest
         }
 
         foreach (SurveyResponse::multiChoiceFields() as $field => $definition) {
-            $rules[$field] = [...$this->presence($field, $catalog), 'array'];
+            $rules[$field] = [...$this->presence($field, $catalog), 'array', ...$this->exclusive($definition, $catalog)];
             $rules["{$field}.*"] = ['distinct', Rule::in($catalog->optionIds($definition['category'], $definition['except'] ?? []))];
         }
 
@@ -65,6 +65,34 @@ class SurveyResponseRequest extends FormRequest
                 SurveyResponse::otherInputName($field).'.required' => '「その他」を選んだ場合は、その内容を入力してください。',
             ]))
             ->all();
+    }
+
+    /**
+     * A multi-select with an option that stands alone (`exclusive`, e.g. 使用していない) may not
+     * have it ticked together with another option.
+     *
+     * @param  array{category: string, exclusive?: string}  $definition
+     * @return list<\Closure>
+     */
+    private function exclusive(array $definition, ChoiceCatalog $catalog): array
+    {
+        $optionId = isset($definition['exclusive'])
+            ? $catalog->optionIdByValue($definition['category'], $definition['exclusive'])
+            : null;
+
+        if ($optionId === null) {
+            return [];
+        }
+
+        $label = $catalog->label($optionId);
+
+        return [function (string $attribute, mixed $value, \Closure $fail) use ($optionId, $label): void {
+            $chosen = array_map(intval(...), (array) $value);
+
+            if (count($chosen) > 1 && in_array($optionId, $chosen, true)) {
+                $fail("「{$label}」は他の選択肢と同時に選べません。");
+            }
+        }];
     }
 
     /**

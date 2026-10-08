@@ -639,6 +639,29 @@ class SurveyResponseTest extends TestCase
         $this->assertDatabaseCount('survey_responses', 1);
     }
 
+    public function test_no_tool_cannot_be_ticked_together_with_a_tool(): void
+    {
+        $base = [
+            'employee_id' => Employee::factory()->create()->id,
+            'customer_id' => Customer::factory()->create()->id,
+            'office_id' => Office::factory()->create()->id,
+        ];
+
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), $this->answer($base + [
+                'tool_option_ids' => [$this->option('tool', 'dedicated'), $this->option('tool', 'none')],
+            ]))
+            ->assertSessionHasErrors(['tool_option_ids' => '「使用していない」は他の選択肢と同時に選べません。']);
+
+        $this->assertDatabaseCount('survey_responses', 0);
+
+        $this->actingAs($this->respondent())
+            ->post(route('responses.store'), $this->answer($base + ['tool_option_ids' => [$this->option('tool', 'none')]]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('survey_responses', 1);
+    }
+
     public function test_an_option_from_another_dropdown_cannot_be_ticked_as_a_billing_item(): void
     {
         $this->actingAs($this->respondent())
