@@ -10,6 +10,8 @@ use App\Models\SurveyResponse;
 use App\Support\ChoiceCatalog;
 use App\Support\SurveyResponseSheet;
 use App\Support\Xlsx;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,7 +50,9 @@ class SurveyResponseController extends Controller
             'employeeId' => $filters['employee_id'],
             'officeId' => $filters['office_id'],
             'customerId' => $filters['customer_id'],
-            'totals' => $this->totals(),
+            'totals' => $this->totals($filters),
+            'progress' => $this->progress($filters),
+            'dailyAnswers' => $this->dailyAnswers($filters),
         ]);
     }
 
@@ -204,16 +208,75 @@ class SurveyResponseController extends Controller
     }
 
     /**
+     * The three figures the original Excel sheet worked out, over the answers the list is
+     * filtered to.
+     *
+     * @param  array{employee_id: ?int, customer_id: ?int, office_id: ?int}  $filters
      * @return array{answered: int, minutes: int, sole_owner: int}
      */
-    private function totals(): array
+    private function totals(array $filters): array
     {
         $soleOwnerId = $this->catalog->optionIdByValue('dependency', 'none_only_me');
+        $answers = fn () => SurveyResponse::query()->filteredBy($filters);
 
         return [
-            'answered' => SurveyResponse::query()->count(),
-            'minutes' => (int) SurveyResponse::query()->selectRaw(SurveyResponse::minutesSumSql().' as minutes')->value('minutes'),
-            'sole_owner' => $soleOwnerId === null ? 0 : SurveyResponse::query()->soleOwner($soleOwnerId)->count(),
+            'answered' => $answers()->count(),
+            'minutes' => (int) $answers()->selectRaw(SurveyResponse::minutesSumSql().' as minutes')->value('minutes'),
+            'sole_owner' => $soleOwnerId === null ? 0 : $answers()->soleOwner($soleOwnerId)->count(),
         ];
+    }
+
+    /**
+     * How far the survey has got: active customers with at least one answer, and the answers
+     * each active office has sent, offices in their display order (unanswered ones included, so
+     * they stand out). Counts only the answers the list is filtered to; a customer filter
+     * narrows the customers to that one.
+     *
+     * @param  array{employee_id: ?int, customer_id: ?int, office_id: ?int}  $filters
+     * @return array{answered_customers: int, customers: int, offices: Collection<int, Office>}
+     */
+    private function progress(array $filters): array
+    {
+        $customers = fn () => Customer::query()->active()->when($filters['customer_id'], fn ($query, int $id) => $query->whereKey($id));
+        $filtered = fn ($query) => $query->filteredBy($filters);
+
+        return [
+            'answered_customers' => $customers()->whereHas('surveyResponses', $filtered)->count(),
+            'customers' => $customers()->count(),
+            'offices' => Office::query()->active()->ordered()->withCount(['surveyResponses' => $filtered])->get(),
+        ];
+    }
+
+    /**
+     * Answers sent per day, from the first answer's day up to today with empty days filled in,
+     * each with the running total, for the 回答数の推移 chart. Follows the list's filters.
+     *
+     * @param  array{employee_id: ?int, customer_id: ?int, office_id: ?int}  $filters
+     * @return list<array{date: CarbonImmutable, answers: int, total: int}>
+     */
+    private function dailyAnswers(array $filters): array
+    {
+        $perDay = SurveyResponse::query()
+            ->filteredBy($filters)
+            ->selectRaw('DATE(created_at) as day, COUNT(*) as answers')
+            ->groupBy('day')
+            ->pluck('answers', 'day');
+
+        if ($perDay->isEmpty()) {
+            return [];
+        }
+
+        $first = CarbonImmutable::parse($perDay->keys()->min());
+        $last = CarbonImmutable::parse($perDay->keys()->max())->max(CarbonImmutable::today());
+        $total = 0;
+
+        return collect(CarbonPeriod::create($first, $last))
+            ->map(function ($day) use ($perDay, &$total): array {
+                $answers = (int) ($perDay[$day->toDateString()] ?? 0);
+                $total += $answers;
+
+                return ['date' => CarbonImmutable::instance($day), 'answers' => $answers, 'total' => $total];
+            })
+            ->all();
     }
 }

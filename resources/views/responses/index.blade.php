@@ -16,6 +16,15 @@
         </div>
     </div>
 
+    @if ($employeeId || $customerId || $officeId)
+        <p class="-mt-3 mb-5 text-xs text-slate-500">数値とグラフは、絞り込んだ回答だけを集計しています。</p>
+    @endif
+
+    <div class="mb-5 grid gap-5 lg:grid-cols-2">
+        @include('responses.partials.progress-chart', ['progress' => $progress])
+        @include('responses.partials.trend-chart', ['days' => $dailyAnswers])
+    </div>
+
     <div class="mb-4 flex flex-wrap items-end gap-3">
         <form method="GET" action="{{ route('responses.index') }}" class="flex flex-wrap items-end gap-3" data-live-filter>
             <div class="space-y-1">
@@ -139,6 +148,39 @@
                 const query = new URLSearchParams([...new FormData(form)].filter(([, value]) => value !== ''));
 
                 window.location.assign(query.size ? `${form.action}?${query}` : form.action);
+            });
+
+            // 回答数の推移: hovering a day draws a crosshair on it and shows that day's figures.
+            document.querySelectorAll('[data-trend-chart]').forEach((chart) => {
+                const svg = chart.querySelector('svg');
+                const crosshair = chart.querySelector('[data-trend-crosshair]');
+                const dot = chart.querySelector('[data-trend-dot]');
+                const tip = chart.querySelector('[data-trend-tip]');
+
+                chart.querySelectorAll('rect[data-tip]').forEach((day) => {
+                    day.addEventListener('mouseenter', () => {
+                        crosshair.setAttribute('x1', day.dataset.x);
+                        crosshair.setAttribute('x2', day.dataset.x);
+                        dot.setAttribute('cx', day.dataset.x);
+                        dot.setAttribute('cy', day.dataset.y);
+                        crosshair.setAttribute('opacity', 1);
+                        dot.setAttribute('opacity', 1);
+
+                        tip.textContent = day.dataset.tip;
+                        tip.classList.remove('hidden');
+
+                        const scale = svg.clientWidth / svg.viewBox.baseVal.width;
+                        const left = Number(day.dataset.x) * scale + 10;
+                        tip.style.left = `${Math.min(left, chart.clientWidth - tip.offsetWidth)}px`;
+                        tip.style.top = `${Math.max(0, Number(day.dataset.y) * scale - tip.offsetHeight - 10)}px`;
+                    });
+                });
+
+                svg.addEventListener('mouseleave', () => {
+                    crosshair.setAttribute('opacity', 0);
+                    dot.setAttribute('opacity', 0);
+                    tip.classList.add('hidden');
+                });
             });
 
             // A click anywhere on a row opens that answer, except on its own links and buttons,

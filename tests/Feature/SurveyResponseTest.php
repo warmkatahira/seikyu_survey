@@ -203,6 +203,42 @@ class SurveyResponseTest extends TestCase
             ->assertDontSee('2222：');
     }
 
+    public function test_the_figures_and_charts_above_the_list_follow_the_filter(): void
+    {
+        $soleOwner = $this->option('dependency', 'none_only_me');
+        [$first, $second] = Office::factory()->count(2)->create();
+        Customer::factory()->count(2)->create();
+
+        $this->travelTo(now()->setDate(2026, 10, 1)->setTime(10, 0));
+        $wanted = SurveyResponse::factory()->for($first)->create(['creation_minutes' => 30, 'detail_creation_minutes' => 15, 'dependency_option_id' => $soleOwner]);
+        $this->travelTo(now()->setDate(2026, 10, 3)->setTime(10, 0));
+        SurveyResponse::factory()->for($first)->create(['creation_minutes' => 10, 'detail_creation_minutes' => null]);
+        SurveyResponse::factory()->for($second)->create(['creation_minutes' => 100, 'detail_creation_minutes' => 0, 'dependency_option_id' => $soleOwner]);
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.index'))
+            ->assertViewHas('totals', ['answered' => 3, 'minutes' => 155, 'sole_owner' => 2])
+            ->assertViewHas('progress', fn (array $progress) => $progress['answered_customers'] === 3
+                && $progress['customers'] === 5
+                && $progress['offices']->pluck('survey_responses_count', 'id')->all() == [$first->id => 2, $second->id => 1])
+            ->assertViewHas('dailyAnswers', fn (array $days) => array_map(fn ($day) => [$day['date']->format('m/d'), $day['answers'], $day['total']], $days)
+                === [['10/01', 1, 1], ['10/02', 0, 1], ['10/03', 2, 3]])
+            ->assertDontSee('絞り込んだ回答だけを集計しています');
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.index', ['office_id' => $first->id]))
+            ->assertViewHas('totals', ['answered' => 2, 'minutes' => 55, 'sole_owner' => 1])
+            ->assertViewHas('progress', fn (array $progress) => $progress['answered_customers'] === 2
+                && $progress['offices']->pluck('survey_responses_count', 'id')->all() == [$first->id => 2, $second->id => 0])
+            ->assertViewHas('dailyAnswers', fn (array $days) => end($days)['total'] === 2)
+            ->assertSee('絞り込んだ回答だけを集計しています');
+
+        $this->actingAs($this->respondent())
+            ->get(route('responses.index', ['customer_id' => $wanted->customer_id]))
+            ->assertViewHas('totals', ['answered' => 1, 'minutes' => 45, 'sole_owner' => 1])
+            ->assertViewHas('progress', fn (array $progress) => $progress['answered_customers'] === 1 && $progress['customers'] === 1);
+    }
+
     public function test_the_list_shows_when_each_answer_was_given_and_last_updated(): void
     {
         $this->travelTo(now()->setDate(2026, 10, 1)->setTime(9, 5));
