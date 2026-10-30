@@ -69,6 +69,35 @@ class SurveyResponseController extends Controller
         );
     }
 
+    /**
+     * Downloads how many answers each customer has, as an Excel workbook. Every active customer
+     * is listed, unanswered ones with 0 so they stand out; an inactive customer appears only when
+     * it has answers. Counts follow the list's filters, and a customer filter lists just that one.
+     */
+    public function exportCustomerCounts(Request $request): StreamedResponse
+    {
+        $filters = $this->filters($request);
+        $filtered = fn ($query) => $query->filteredBy($filters);
+
+        $customers = Customer::query()
+            ->when($filters['customer_id'], fn ($query, int $id) => $query->whereKey($id))
+            ->where(fn ($query) => $query->where('is_active', true)->orWhereHas('surveyResponses', $filtered))
+            ->withCount(['surveyResponses' => $filtered])
+            ->ordered()
+            ->get();
+
+        return Xlsx::download(
+            'survey_customer_counts_'.now()->format('Ymd_His').'.xlsx',
+            '顧客別回答数',
+            ['顧客コード', '顧客名', '回答数'],
+            $customers->map(fn (Customer $customer): array => [
+                $customer->code,
+                $customer->name.($customer->is_active ? '' : '（無効）'),
+                $customer->survey_responses_count,
+            ])->all(),
+        );
+    }
+
     public function create(Request $request): View
     {
         $chosenEmployeeId = $request->integer('employee_id');

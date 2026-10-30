@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::redirect('/', '/responses');
     Route::get('/responses/excel', [SurveyResponseController::class, 'export'])->name('responses.export');
+    Route::get('/responses/excel/customers', [SurveyResponseController::class, 'exportCustomerCounts'])->name('responses.export-customers');
     Route::resource('responses', SurveyResponseController::class)
         ->parameters(['responses' => 'response']);
 

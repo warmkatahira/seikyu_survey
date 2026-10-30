@@ -75,6 +75,12 @@
             {{ $employeeId || $customerId || $officeId ? '絞り込み結果をExcelで出力' : 'Excelで出力' }}
         </a>
 
+        <a href="{{ route('responses.export-customers', array_filter(['employee_id' => $employeeId, 'customer_id' => $customerId, 'office_id' => $officeId])) }}"
+            class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+            title="顧客ごとの回答数をExcelファイルで出力します（回答がまだない顧客は0件）">
+            顧客別回答数をExcelで出力
+        </a>
+
         <a href="{{ route('responses.create') }}"
             class="rounded-md bg-teal-900 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800">
             ＋ 新しい顧客の回答を追加

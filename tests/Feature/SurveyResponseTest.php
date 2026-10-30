@@ -291,6 +291,56 @@ class SurveyResponseTest extends TestCase
         $this->assertContains(45, $rows[1], '作成時間 stays a number Excel can sum.');
     }
 
+    public function test_the_answer_count_of_each_customer_downloads_as_an_excel_workbook(): void
+    {
+        $office = Office::factory()->create();
+        $twice = Customer::factory()->create(['sort_order' => 0, 'code' => '1111', 'name' => '株式会社ＡＡＡＡ']);
+        Customer::factory()->create(['sort_order' => 0, 'code' => '2222', 'name' => '株式会社ＢＢＢＢ']);
+        $retired = Customer::factory()->inactive()->create(['sort_order' => 0, 'code' => '3333', 'name' => '株式会社ＣＣＣＣ']);
+        Customer::factory()->inactive()->create(['sort_order' => 0, 'code' => '4444', 'name' => '株式会社ＤＤＤＤ']);
+        SurveyResponse::factory()->count(2)->for($twice)->create(['office_id' => $office->id]);
+        SurveyResponse::factory()->for($twice)->create();
+        SurveyResponse::factory()->for($retired)->create(['office_id' => $office->id]);
+
+        $this->assertSame(
+            [['顧客コード', '顧客名', '回答数'], ['1111', '株式会社ＡＡＡＡ', 3], ['2222', '株式会社ＢＢＢＢ', 0], ['3333', '株式会社ＣＣＣＣ（無効）', 1]],
+            $this->workbookRows(route('responses.export-customers'), '顧客別回答数'),
+            'Unanswered active customers show 0; inactive ones only when answered.',
+        );
+
+        $this->assertSame(
+            [['1111', '株式会社ＡＡＡＡ', 2], ['2222', '株式会社ＢＢＢＢ', 0], ['3333', '株式会社ＣＣＣＣ（無効）', 1]],
+            array_slice($this->workbookRows(route('responses.export-customers', ['office_id' => $office->id]), '顧客別回答数'), 1),
+            'Counts follow the list\'s filters.',
+        );
+    }
+
+    /**
+     * @return list<list<mixed>>
+     */
+    private function workbookRows(string $url, string $sheetName): array
+    {
+        $response = $this->actingAs($this->respondent())->get($url);
+        $response->assertOk()->assertDownload();
+
+        $path = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($path, $response->streamedContent());
+
+        $reader = new XlsxReader;
+        $reader->open($path);
+        $rows = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            $this->assertSame($sheetName, $sheet->getName());
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+        }
+        $reader->close();
+        unlink($path);
+
+        return $rows;
+    }
+
     public function test_an_answer_can_be_read_without_opening_the_edit_form(): void
     {
         $answer = SurveyResponse::factory()
